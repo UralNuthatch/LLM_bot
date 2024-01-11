@@ -41,19 +41,16 @@ async def process_help_command(message: Message):
 @router.message(F.voice.as_("voice_prompt"))
 async def get_send_audio(message: Message, voice_prompt: Voice, bot):
     try:
-        logging.info("Начало обработки аудиозапроса")
         # У бота появляется статус - печатает
         await bot.send_chat_action(message.chat.id, action="typing")
         # Скачивание файла в ogg формате
         file = await bot.get_file(voice_prompt.file_id)
         file_path = file.file_path
         await bot.download_file(file_path, f"{message.chat.id}.ogg")
-        logging.info("Скачал файл из телеграма в ogg формате")
 
         # Конвертация в wav формат
         data, samplerate = soundfile.read(f"{message.chat.id}.ogg")
         soundfile.write(f"{message.chat.id}.wav", data, samplerate)
-        logging.info("Файл сконвертирован в wav формат")
 
 
         recognizer = sr.Recognizer()
@@ -62,7 +59,6 @@ async def get_send_audio(message: Message, voice_prompt: Voice, bot):
 
         # Преобразование аудиозаписи в текст
         text = recognizer.recognize_google(audio, language="ru-RU")
-        logging.info("Голосовой файл преобразован в текст, отправляю запрос модели gemini")
 
         await message.answer(f"{LEXICON['processing_response']} {text}")
         # У бота появляется статус - печатает
@@ -70,7 +66,6 @@ async def get_send_audio(message: Message, voice_prompt: Voice, bot):
         # Отправляем модели текстовый запрос
         model = genai.GenerativeModel('gemini-pro')
         response = model.generate_content(text)
-        logging.info("Получен ответ от gemini. Отправляю ответ пользователю")
         await message.answer(response.text)
 
     except Exception as ex:
