@@ -1,18 +1,28 @@
 import os
 import logging
-import requests
 import soundfile
 import speech_recognition as sr
 import google.generativeai as genai
-from aiogram import Router, F
-from aiogram.types import Message, PhotoSize, Voice
+
+from aiogram import Bot, Router, F, flags
+from aiogram.types import Message, PhotoSize, Voice, FSInputFile
 from aiogram.filters import CommandStart, Command
-from config_data.config import load_config, Config
-from PIL import Image
+from aiogram.utils.chat_action import ChatActionMiddleware
+from aiogram_dialog import DialogManager, StartMode
+from fluentogram import TranslatorRunner
+
 from lexicon.lexicon import LEXICON
+from config_data.config import load_config, Config
+from states import LlmSG, ImgLlmSelectSG
+from database.database import DB
+from services.model_from_category import select_model_category
+from alerts.to_admin import send_no_key
+
 
 # Создаем объект - роутер
 router = Router()
+# Вешаем на роутер миддлварь для отправления статуса "печатает" при ответе
+router.message.middleware(ChatActionMiddleware())
 
 # Получаем API-ключ и ключ бота из конфига(через переменные окружения)
 config: Config = load_config()
@@ -23,23 +33,22 @@ genai.configure(api_key=config.api_key)
 # Этот хэндлер срабатывает на команду start
 @router.message(CommandStart())
 async def process_start_command(message: Message):
-    text = LEXICON["/start"]
     try:
-        file_id = "AgACAgIAAxkBAAIFUWV65ZX6qF_21NsZnMzZ_rw1-WWPAAKP0TEbFd3YS9XO5YHx7CH6AQADAgADeAADMwQ"
-        await message.answer_photo(file_id, caption=text)
+        img = FSInputFile(f"start.png")
+        await message.answer_photo(img)
     except:
-        await message.answer(text)
+        await message.answer("Hello, can I help you?")
 
 
-# Этот хэндлер будет срабатывать на комнаду help
-@router.message(Command(commands="help"))
-async def process_help_command(message: Message):
-    await message.answer(LEXICON["/help"])
+# Этот хэндлер будет срабатывать на комнаду models
+@router.message(Command(commands="models"))
+async def process_help_command(message: Message, dialog_manager: DialogManager):
+    await dialog_manager.start(state=LlmSG.start, mode=StartMode.RESET_STACK)
 
 
 # Этот хэндлер срабатывает когда приходит звуковое сообщение
 @router.message(F.voice.as_("voice_prompt"))
-async def get_send_audio(message: Message, voice_prompt: Voice, bot):
+async def get_send_audio(message: Message, voice_prompt: Voice, bot: Bot, i18n: TranslatorRunner, db: DB):
     try:
         # У бота появляется статус - печатает
         await bot.send_chat_action(message.chat.id, action="typing")
@@ -52,7 +61,6 @@ async def get_send_audio(message: Message, voice_prompt: Voice, bot):
         data, samplerate = soundfile.read(f"{message.chat.id}.ogg")
         soundfile.write(f"{message.chat.id}.wav", data, samplerate)
 
-
         recognizer = sr.Recognizer()
         with sr.AudioFile(f"{message.chat.id}.wav") as source:
             audio = recognizer.record(source=source)
@@ -60,16 +68,26 @@ async def get_send_audio(message: Message, voice_prompt: Voice, bot):
         # Преобразование аудиозаписи в текст
         text = recognizer.recognize_google(audio, language="ru-RU")
 
-        await message.answer(f"{LEXICON['processing_response']} {text}")
-        # У бота появляется статус - печатает
-        await bot.send_chat_action(message.chat.id, action="typing")
-        # Отправляем модели текстовый запрос
-        model = genai.GenerativeModel('gemini-pro')
-        response = model.generate_content(text)
-        await message.answer(response.text)
+        await message.answer(f"{i18n.processing.request()} {text}")
+
+        # Определяем по БД модель ИИ пользователя
+        llm_category, llm_model, llm_name, llm_img = await db.get_users_llm(message.from_user.id)
+        # Обрабатываем запрос в зависимости от модели
+        response = await select_model_category(llm_category, llm_model, str(text), message.from_user.id, db)
+        # Если был запрос на генерацию изображения
+        if response == 'image':
+            if os.path.exists(f"{message.chat.id}.jpeg"):
+                img = FSInputFile(f"{message.chat.id}.jpeg")
+                await message.answer_photo(img)
+                os.remove(f"{message.chat.id}.jpeg")
+        elif response == 'no_key':
+            await message.answer("К сожалению закончились попытки генерации изображений. Попробуйте позднее.")
+            await message.bot.send_message(chat_id=348123497, text='закончились ключи для stability')
+        else:
+            await message.answer(f"{llm_img} {llm_name}:\n{response}")
 
     except Exception as ex:
-        await message.answer(LEXICON["error"])
+        await message.answer(i18n.error())
         logging.error(ex)
     finally:
         # Удаление скачанного ogg и преобразованного в wav файлов
@@ -79,49 +97,50 @@ async def get_send_audio(message: Message, voice_prompt: Voice, bot):
             os.remove(f"{message.chat.id}.wav")
 
 
-
 # Этот хэндлер будет обрабатывать изображения от пользоваетеля с подписью или без
-@router.message(F.photo[-1].as_('largest_photo'))
-async def get_send_photo(message: Message, largest_photo: PhotoSize, bot):
-    try:
-        # У бота появляется статус - печатает
-        await bot.send_chat_action(message.chat.id, action="typing")
-        # Используется модель поддерживающая изображения и текст в запросах
-        model = genai.GenerativeModel('gemini-pro-vision')
+@router.message(F.photo[-1].as_("largest_photo"))
+async def get_send_photo(message: Message, largest_photo: PhotoSize, dialog_manager:DialogManager, i18n: TranslatorRunner):
+        # Появляется надпись - печатает
+        await message.bot.send_chat_action(message.chat.id, action="typing")
         # Если изображение от пользователя пришло без подписи, то ставим стандартный запрос
         if message.caption:
             text = message.caption
         else:
-            text = LEXICON["picture_response"]
+            text = i18n.picture.response()
+
         # Получаем путь до изображения
-        file = await bot.get_file(file_id=largest_photo.file_id)
-        file_path = f"https://api.telegram.org/file/bot{config.tgbot.token}/{file.file_path}"
-        img_response = requests.get(file_path, stream=True).raw
-
-        await bot.send_chat_action(message.chat.id, action="typing")
-        # Отправляем запрос с картинкой и текстом модели ИИ
-        with Image.open(img_response) as img:
-            response = model.generate_content([text, img], stream=True)
-        response.resolve()
-        await message.answer(text=response.text)
-
-    # Обрабатываем ошибки и заносим в логи
-    except Exception as ex:
-        logging.error(ex)
-        await message.answer(LEXICON["error"])
+        file = await message.bot.get_file(file_id=largest_photo.file_id)
+        img_path = f"input_{message.from_user.id}.jpeg"
+        # Скачиваем файл на локальную машину
+        await message.bot.download_file(file_path=file.file_path, destination=img_path)
+        await dialog_manager.start(state=ImgLlmSelectSG.start, mode=StartMode.RESET_STACK, data={'img': img_path, 'text': text})
 
 
 # Этот хэндлер срабатывает если пользователь прислал текстовое сообщение
 @router.message(F.text)
-async def get_send_text(message: Message, bot):
+async def get_send_text(message: Message, bot: Bot, i18n: TranslatorRunner, db: DB):
     try:
         # У бота появляется статус - печатает
         await bot.send_chat_action(message.chat.id, action="typing")
-        # Используем модель предназначенную только для текстовых запросов
-        model = genai.GenerativeModel('gemini-pro')
-        response = model.generate_content(message.text)
-        await message.answer(response.text)
+        # Определяем по БД модель ИИ пользователя
+        llm_category, llm_model, llm_name, llm_img = await db.get_users_llm(message.from_user.id)
+        # Обрабатываем запрос в зависимости от модели
+        response = await select_model_category(llm_category, llm_model, message.text, message.from_user.id, db)
+        # Если был запрос на генерацию изображения
+        if response == 'image':
+            if os.path.exists(f"{message.chat.id}.png"):
+                img = FSInputFile(f"{message.chat.id}.png")
+                if os.path.getsize(f"{message.chat.id}.png") < 10485760:
+                    await message.answer_photo(img)
+                await message.answer_document(img)
+                os.remove(f"{message.chat.id}.png")
+        elif response == 'no_key':
+            await message.answer(i18n.keys.ended())
+            await send_no_key(bot)
+        else:
+            # Если был текстовый запрос и тоже в виде текста
+            await message.answer(f"{llm_img} {llm_name}:\n{response}")
     # Обрабатываем возможные ошибки
     except Exception as ex:
         logging.error(ex)
-        await message.answer(LEXICON["error"])
+        await message.answer(f"{llm_img} {llm_name}:\n{i18n.error()}")
