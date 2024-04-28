@@ -10,7 +10,7 @@ def response_google_model(llm_model, text_request: str):
         response = model.generate_content(text_request)
         # Удаляем символы, которые ломают MARKDOWN и вызывают Telegram bad request
         text = response.text.replace("* ", "")
-        return response.text
+        return text
 
 
 def response_google_model_for_image(img_path, text:str):
