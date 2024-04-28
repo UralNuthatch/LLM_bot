@@ -3,6 +3,7 @@ import asyncio
 import nest_asyncio
 from asyncpg import create_pool
 from aiogram import Bot, Dispatcher
+from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram_dialog import setup_dialogs
 from fluentogram import TranslatorHub
@@ -19,7 +20,7 @@ async def main():
     config: Config = load_config()
 
     # Создаем объекты бота и диспетчера
-    bot = Bot(token=config.tgbot.token, parse_mode=ParseMode.MARKDOWN)
+    bot = Bot(token=config.tgbot.token, default=DefaultBotProperties(parse_mode=ParseMode.MARKDOWN))
     dp = Dispatcher()
 
     # Создаем объект типа TranslatorHub
