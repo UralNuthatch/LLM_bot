@@ -4,16 +4,13 @@ import asyncio
 import logging
 from aiogram.types import CallbackQuery, FSInputFile
 from aiogram_dialog import BaseDialogManager
+from fluentogram import TranslatorRunner
 
 from database.database import DB
 
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(
-                    format='%(filename)s:%(lineno)d #%(levelname)-8s '
-                    '[%(asctime)s] - %(name)s - %(message)s',
-                    level=logging.INFO
-                    )
+
 
 # Запрос кол-ва кредитов
 def balance(key: str):
@@ -27,7 +24,6 @@ def balance(key: str):
 
     payload = response.json()
     return payload['credits']
-
 
 
 
@@ -164,7 +160,7 @@ async def response_upscale_img_model(img, prompt: str, telegram_id: int, db: DB)
         },
     )
 
-    logging.info(f"Generation ID: {response.json().get('id')}")
+    #logging.info(f"Generation ID: {response.json().get('id')}")
 
     if response.status_code == 200:
         await db.waste_credits(id, price)
@@ -181,9 +177,9 @@ async def response_upscale_img_model(img, prompt: str, telegram_id: int, db: DB)
 
 
 async def response_upscale_img_result(callback: CallbackQuery, manager: BaseDialogManager,
-                                      telegram_id: int, key: str, generation_id: str):
+                                      telegram_id: int, key: str, generation_id: str, i18n: TranslatorRunner):
     try:
-        for i in range(1, 21):
+        for i in range(1, 25):
             await asyncio.sleep(5)
             await manager.update({"progress": min(i * 10, 100)})
             if i % 2:
@@ -198,11 +194,13 @@ async def response_upscale_img_result(callback: CallbackQuery, manager: BaseDial
             if response.status_code == 202:
                 logging.info("Generation in-progress, try again in 10 seconds.")
             elif response.status_code == 200:
-                logging.info("Generation complete!")
+                #logging.info("Generation complete!")
+                await manager.update({"progress": 100})
+                # У бота появляется статус - отправляет фото
+                callback.message.bot.send_chat_action(callback.message.chat.id, action="upload_photo")
                 with open(f"{telegram_id}.png", 'wb') as file:
                     file.write(response.content)
                     img = FSInputFile(f"{telegram_id}.png")
-                await manager.update({"progress": 100})
                 # Ограничение на отправку фото в телеграм - 10 мб
                 if os.path.getsize(f"{telegram_id}.png") < 10485760:
                     await callback.message.bot.send_photo(telegram_id, img)
@@ -213,6 +211,8 @@ async def response_upscale_img_result(callback: CallbackQuery, manager: BaseDial
             else:
                 #raise Exception(str(response.json()))
                 logging.error(str(response.json()))
+        else:
+            callback.message.answer(i18n.error())
     except Exception as ex:
         logging.error(ex)
     finally:
@@ -259,9 +259,9 @@ async def response_image_to_video_model(img, telegram_id: int, db: DB) -> tuple[
 
 
 async def response_image_to_video_result(callback: CallbackQuery, manager: BaseDialogManager,
-                                      telegram_id: int, key: str, generation_id: str):
+                                      telegram_id: int, key: str, generation_id: str, i18n: TranslatorRunner):
     try:
-        for i in range(1, 21):
+        for i in range(1, 25):
             await asyncio.sleep(5)
             # Каждые пять секунд заполняем прогрессбар на 10%, а запрос отправляем только каждые 10 секунд
             await manager.update({"progress": min(i * 10, 100)})
@@ -277,16 +277,20 @@ async def response_image_to_video_result(callback: CallbackQuery, manager: BaseD
             if response.status_code == 202:
                 logging.info("Generation in-progress, try again in 10 seconds.")
             elif response.status_code == 200:
-                logging.info("Generation complete!")
+                #logging.info("Generation complete!")
+                await manager.update({"progress": 100})
+                # У бота появляется статус - отправляет видео
+                callback.message.bot.send_chat_action(callback.message.chat.id, action="upload_video")
                 with open(f"{telegram_id}.mp4", 'wb') as file:
                     file.write(response.content)
                     video = FSInputFile(f"{telegram_id}.mp4")
-                await manager.update({"progress": 100})
                 await callback.message.bot.send_video(telegram_id, video)
                 os.remove(f"{telegram_id}.mp4")
                 break
             else:
                 logging.error(str(response.json()))
+        else:
+            callback.message.answer(i18n.error())
     except Exception as ex:
         logging.error(ex)
     finally:

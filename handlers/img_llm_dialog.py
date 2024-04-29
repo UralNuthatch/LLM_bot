@@ -20,11 +20,6 @@ from services.models.stability import (response_search_replace_img_model, respon
 
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(
-                    format='%(filename)s:%(lineno)d #%(levelname)-8s '
-                    '[%(asctime)s] - %(name)s - %(message)s',
-                    level=logging.INFO
-                    )
 
 
 async def select_google_model(callback: CallbackQuery, button: Button, dialog_manager: DialogManager):
@@ -126,6 +121,7 @@ async def correct_replace_prompt(message: Message, widget: ManagedTextInput, dia
             await send_no_key(message.bot)
         else:
             if os.path.exists(f"{message.chat.id}.png"):
+                await message.bot.send_chat_action(message.chat.id, action="upload_photo")
                 img = FSInputFile(f"{message.chat.id}.png")
                 if os.path.getsize(f"{message.chat.id}.png") < 10485760:
                     await message.answer_photo(img)
@@ -153,6 +149,7 @@ async def remove_back_click(callback: CallbackQuery, button: Button, dialog_mana
             await send_no_key(callback.message.bot)
         else:
             if os.path.exists(f"{callback.message.chat.id}.png"):
+                await callback.bot.send_chat_action(callback.message.chat.id, action="upload_photo")
                 img = FSInputFile(f"{callback.message.chat.id}.png")
                 if os.path.getsize(f"{callback.message.chat.id}.png") < 10485760:
                     await callback.message.answer_photo(img)
@@ -206,7 +203,7 @@ async def upscale_click(callback: CallbackQuery, button: Button, dialog_manager:
     # Получение результата
     if flag and 4096 <= width * height <= 1048576 and not generation_id is None:
         await dialog_manager.start(ProgressSG.processing)
-        asyncio.create_task(response_upscale_img_result(callback, dialog_manager.bg(), callback.from_user.id, key, generation_id))
+        asyncio.create_task(response_upscale_img_result(callback, dialog_manager.bg(), callback.from_user.id, key, generation_id, i18n))
 
 
 async def create_video_click(callback: CallbackQuery, button: Button, dialog_manager: DialogManager):
@@ -242,7 +239,7 @@ async def create_video_click(callback: CallbackQuery, button: Button, dialog_man
     # Получение результата
     if Flag and (width, height) in ((1024, 576), (576, 1024), (768, 768)) and not generation_id is None:
         await dialog_manager.start(ProgressSG.processing)
-        asyncio.create_task(response_image_to_video_result(callback, dialog_manager.bg(), callback.from_user.id, key, generation_id))
+        asyncio.create_task(response_image_to_video_result(callback, dialog_manager.bg(), callback.from_user.id, key, generation_id, i18n))
 
 
 img_llm_select_dialog = Dialog(

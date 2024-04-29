@@ -2,7 +2,6 @@ import os
 import logging
 import soundfile
 import speech_recognition as sr
-import google.generativeai as genai
 
 from aiogram import Bot, Router, F, flags
 from aiogram.types import Message, PhotoSize, Voice, FSInputFile
@@ -11,7 +10,6 @@ from aiogram.utils.chat_action import ChatActionMiddleware
 from aiogram_dialog import DialogManager, StartMode
 from fluentogram import TranslatorRunner
 
-from lexicon.lexicon import LEXICON
 from config_data.config import load_config, Config
 from states import LlmSG, ImgLlmSelectSG
 from database.database import DB
@@ -27,7 +25,7 @@ router.message.middleware(ChatActionMiddleware())
 # Получаем API-ключ и ключ бота из конфига(через переменные окружения)
 config: Config = load_config()
 
-genai.configure(api_key=config.api_key)
+logger = logging.Logger(__name__)
 
 
 # Этот хэндлер срабатывает на команду start
@@ -50,8 +48,6 @@ async def process_help_command(message: Message, dialog_manager: DialogManager):
 @router.message(F.voice.as_("voice_prompt"))
 async def get_send_audio(message: Message, voice_prompt: Voice, bot: Bot, i18n: TranslatorRunner, db: DB):
     try:
-        # У бота появляется статус - печатает
-        await bot.send_chat_action(message.chat.id, action="typing")
         # Скачивание файла в ogg формате
         file = await bot.get_file(voice_prompt.file_id)
         file_path = file.file_path
@@ -100,8 +96,6 @@ async def get_send_audio(message: Message, voice_prompt: Voice, bot: Bot, i18n: 
 # Этот хэндлер будет обрабатывать изображения от пользоваетеля с подписью или без
 @router.message(F.photo[-1].as_("largest_photo"))
 async def get_send_photo(message: Message, largest_photo: PhotoSize, dialog_manager:DialogManager, i18n: TranslatorRunner):
-        # Появляется надпись - печатает
-        await message.bot.send_chat_action(message.chat.id, action="typing")
         # Если изображение от пользователя пришло без подписи, то ставим стандартный запрос
         if message.caption:
             text = message.caption
@@ -120,8 +114,6 @@ async def get_send_photo(message: Message, largest_photo: PhotoSize, dialog_mana
 @router.message(F.text)
 async def get_send_text(message: Message, bot: Bot, i18n: TranslatorRunner, db: DB):
     try:
-        # У бота появляется статус - печатает
-        await bot.send_chat_action(message.chat.id, action="typing")
         # Определяем по БД модель ИИ пользователя
         llm_category, llm_model, llm_name, llm_img = await db.get_users_llm(message.from_user.id)
         # Обрабатываем запрос в зависимости от модели
@@ -129,6 +121,8 @@ async def get_send_text(message: Message, bot: Bot, i18n: TranslatorRunner, db: 
         # Если был запрос на генерацию изображения
         if response == 'image':
             if os.path.exists(f"{message.chat.id}.png"):
+                # У бота появляется статус - загрузка фотографии
+                await message.bot.send_chat_action(message.chat.id, action="upload_photo")
                 img = FSInputFile(f"{message.chat.id}.png")
                 if os.path.getsize(f"{message.chat.id}.png") < 10485760:
                     await message.answer_photo(img)

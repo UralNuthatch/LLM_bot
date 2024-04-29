@@ -53,13 +53,13 @@ async def main():
     dp.update.middleware(DbSessionMiddleware())
 
     # Конфигурируем и запускаем логирование
-    logger = logging.getLogger("simple")
+    logger = logging.getLogger("LLM_bot_main")
     logging.basicConfig(
-                                format='%(filename)s:%(lineno)d #%(levelname)-8s '
-                                '[%(asctime)s] - %(name)s - %(message)s',
-                                level=logging.INFO
-                                )
-    logger.info("Starting bot...")
+                                format='[{asctime}] #{levelname:8} {filename}:'
+                                        '{lineno} - {name} - {message}',
+                                style='{',
+                                level=logging.WARNING)
+    logger.warning("Starting bot...")
 
     # Регистрируем асинхронную функцию в диспетчере,
     # которая будет выполняться на старте бота
