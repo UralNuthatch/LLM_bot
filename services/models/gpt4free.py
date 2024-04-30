@@ -20,11 +20,25 @@ async def response_gpt4free_model_img(model, prompt: str, telegram_id: int) -> s
     set_cookies(".google.com", {
   "__Secure-1PSID": "g.a000iwizmeheF9bs_EdCkFRgUBLO2Ljh0gy8bOOqZ8tFpo_75o9TKwn7mfMVjRYmNa7AMfeKtAACgYKAcASAQASFQHGX2Mi60H86QQThqe0csByXH9o_xoVAUF8yKrA1G_RAhhsDScxFf_t7mQk0076"
     })
-    client = Client()
-    response = client.images.generate(
-        model=model,
-        prompt=prompt,
-    )
+    try:
+        client = Client()
+        response = client.images.generate(
+            model=model,
+            prompt=prompt,
+        )
+    except:
+        set_cookies(".bing.com", {
+    "_U": "1GKwFA2dVQaxvQUBoDC6yDtFzWFIe1pDSkenz_nxwnT_o0SEbryDClwOiRYOGaJdcT5Am3SbuIn9VyX5nUPpZ61pEzO3hLhcJYKaRyCEnqQ12YmX3AoLJfTNBaTsKgdOW53eyvju1zt3Qou25dXoyCMk46RLJBcYkHO_vm1USto4wbDAkzcBHIdqzMzZha0BKewapSbYsUc7puM6vO2QLMADzMwmRj317FmQZK0XzJ9o"})
+
+        set_cookies(".google.com", {
+  "__Secure-1PSID": "g.a000jAhw1steAVvjQBk7Vma13R6KxSa4Yox76VbFFkhqakEZ8vdasgaMMxXxW38uCOA0wAolSAACgYKAdMSAQASFQHGX2MinIHPGwTTevbaeFR_2LQ3khoVAUF8yKqMjPRy-Xi4iXmbH6jq5VQy0076"
+    })
+        client = Client()
+        response = client.images.generate(
+            model=model,
+            prompt=prompt,
+        )
+
     image_url = response.data[0].url
 
     # Скачиваем файл на локальную машину
