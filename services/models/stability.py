@@ -8,6 +8,8 @@ from fluentogram import TranslatorRunner
 
 from database.database import DB
 
+class NoKeyError(Exception):
+    pass
 
 logger = logging.getLogger(__name__)
 
@@ -26,13 +28,13 @@ def balance(key: str):
     return payload['credits']
 
 
-
+# Создать изображение по текстовому запросу
 async def response_stability_img_model(text_request: str, telegram_id: int, db: DB):
     # Цена одного запроса в кредитах
     price = 6.5
     key_row = await db.select_valid_key(price)
     if key_row is None:
-        return 'no_key'
+        raise NoKeyError()
 
     id, key = key_row
     response = requests.post(
@@ -59,8 +61,6 @@ async def response_stability_img_model(text_request: str, telegram_id: int, db: 
             credits = balance(key)
             await db.update_credits(id, credits)
         raise Exception(str(response.json()))
-
-    return 'image'
 
 
 # Найти и заменить

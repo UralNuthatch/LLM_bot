@@ -8,6 +8,7 @@ from aiogram.types import Message, PhotoSize, Voice, FSInputFile
 from aiogram.filters import CommandStart, Command
 from aiogram.utils.chat_action import ChatActionMiddleware
 from aiogram_dialog import DialogManager, StartMode
+from aiogram.exceptions import TelegramBadRequest
 from fluentogram import TranslatorRunner
 
 from config_data.config import load_config, Config
@@ -15,10 +16,15 @@ from states import LlmSG, ImgLlmSelectSG
 from database.database import DB
 from services.model_from_category import select_model_category
 from alerts.to_admin import send_no_key
+from middlewares.llm_for_user import LLMForUser
+from filters.type_response import TextResponse, ImgResponse
+from services.models.stability import NoKeyError
 
 
 # Создаем объект - роутер
 router = Router()
+# Миддлварь в которой определяются настройки пользователя(выбранная модель)
+router.message.outer_middleware(LLMForUser())
 # Вешаем на роутер миддлварь для отправления статуса "печатает" при ответе
 router.message.middleware(ChatActionMiddleware())
 
@@ -67,7 +73,7 @@ async def get_send_audio(message: Message, voice_prompt: Voice, bot: Bot, i18n: 
         await message.answer(f"{i18n.processing.request()} {text}")
 
         # Определяем по БД модель ИИ пользователя
-        llm_category, llm_model, llm_name, llm_img = await db.get_users_llm(message.from_user.id)
+        llm_category, llm_model, llm_name, llm_img, llm_response = await db.get_users_llm(message.from_user.id)
         # Обрабатываем запрос в зависимости от модели
         response = await select_model_category(llm_category, llm_model, str(text), message.from_user.id, db)
         # Если был запрос на генерацию изображения
@@ -110,31 +116,54 @@ async def get_send_photo(message: Message, largest_photo: PhotoSize, dialog_mana
         await dialog_manager.start(state=ImgLlmSelectSG.start, mode=StartMode.RESET_STACK, data={'img': img_path, 'text': text})
 
 
-# Этот хэндлер срабатывает если пользователь прислал текстовое сообщение
-@router.message(F.text)
-async def get_send_text(message: Message, bot: Bot, i18n: TranslatorRunner, db: DB):
+# Если пользователь прислал текстовое сообщение, и ответ тоже текст
+@router.message(F.text, TextResponse())
+async def text_for_text(message: Message, i18n: TranslatorRunner, db: DB, llm: dict):
     try:
-        # Определяем по БД модель ИИ пользователя
-        llm_category, llm_model, llm_name, llm_img = await db.get_users_llm(message.from_user.id)
         # Обрабатываем запрос в зависимости от модели
-        response = await select_model_category(llm_category, llm_model, message.text, message.from_user.id, db)
-        # Если был запрос на генерацию изображения
-        if response == 'image':
-            if os.path.exists(f"{message.chat.id}.png"):
-                # У бота появляется статус - загрузка фотографии
-                await message.bot.send_chat_action(message.chat.id, action="upload_photo")
-                img = FSInputFile(f"{message.chat.id}.png")
-                if os.path.getsize(f"{message.chat.id}.png") < 10485760:
-                    await message.answer_photo(img)
-                await message.answer_document(img)
-                os.remove(f"{message.chat.id}.png")
-        elif response == 'no_key':
-            await message.answer(i18n.keys.ended())
-            await send_no_key(bot)
-        else:
-            # Если был текстовый запрос и тоже в виде текста
-            await message.answer(f"{llm_img} {llm_name}:\n{response}")
-    # Обрабатываем возможные ошибки
+        response = await select_model_category(llm["llm_category"],
+                                               llm["llm_model"],
+                                               message.text,
+                                               message.from_user.id,
+                                               db)
+
+        # Если длина сообщения больше 4096 - исключение TelegramBadRequest - message too long
+        await message.answer(f'{llm["llm_img"]} {llm["llm_name"]}:\n{response[:4050]}')
+        if response[4050:]:
+            await message.answer(f'{response[4050:]}')
+    # Если parse_mode=Markdown поломан - TelegramBadRequest - can't parse entities...
+    except TelegramBadRequest:
+        await message.answer(f'{llm["llm_img"]} {llm["llm_name"]}:\n{response[:4050]}', parse_mode='HTML')
+        if response[4050:]:
+            await message.answer(f'{response[4050:]}', parse_mode='HTML')
     except Exception as ex:
         logging.error(ex)
-        await message.answer(f"{llm_img} {llm_name}:\n{i18n.error()}")
+        await message.answer(f'{llm["llm_img"]} {llm["llm_name"]}:\n{i18n.error()}')
+
+
+# Если пользователь прислал текстовое сообщение, а ответ будет изображение
+@router.message(F.text, ImgResponse())
+@flags.chat_action("upload_photo")
+async def text_for_image(message: Message, bot: Bot, i18n: TranslatorRunner, db: DB, llm: dict):
+    try:
+        # Обрабатываем запрос в зависимости от модели
+        await select_model_category(llm["llm_category"],
+                                               llm["llm_model"],
+                                               message.text,
+                                               message.from_user.id,
+                                               db)
+
+        if os.path.exists(f"{message.chat.id}.png"):
+            img = FSInputFile(f"{message.chat.id}.png")
+            if os.path.getsize(f"{message.chat.id}.png") < 10485760:
+                await message.answer_photo(img)
+            await message.answer_document(img)
+            os.remove(f"{message.chat.id}.png")
+    # Если закончились ключи
+    except NoKeyError:
+        await message.answer(i18n.keys.ended())
+        await send_no_key(bot)
+    # Обрабатываем другие ошибки
+    except Exception as ex:
+        logging.error(ex)
+        await message.answer(f'{llm["llm_img"]} {llm["llm_name"]}:\n{i18n.error()}')

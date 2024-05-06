@@ -39,14 +39,14 @@ class DB:
 
 
     async def get_users_llm(self, telegram_id: int) -> tuple:
-        llm = await self.connection.fetchrow('''SELECT llm.id, llm.model, llm.name, llm.category, llm.img FROM llm
+        llm = await self.connection.fetchrow('''SELECT llm.id, llm.model, llm.name, llm.category, llm.img, llm.response FROM llm
                                              LEFT JOIN users_llm ON llm.id = users_llm.llm WHERE users_llm.tel_id = $1''',
                                              telegram_id)
         if llm is None:
             # default model
-            return (1, 'gemini-pro', 'gemini-1.0', '🅖')
+            return (1, 'gemini-pro', 'gemini-1.0', '🅖', 'text')
 
-        return (llm.get("category"), llm.get('model'), llm.get('name'), llm.get('img'))
+        return (llm.get("category"), llm.get('model'), llm.get('name'), llm.get('img'), llm.get('response'))
 
 
     async def select_valid_key(self, credits: float) -> str:
