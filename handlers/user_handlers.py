@@ -17,6 +17,7 @@ from database.database import DB
 from services.model_from_category import select_model_category
 from alerts.to_admin import send_no_key
 from middlewares.llm_for_user import LLMForUser
+from middlewares.history_messages import HistoryMessages
 from filters.type_response import TextResponse, ImgResponse
 from services.models.stability import NoKeyError
 
@@ -25,6 +26,8 @@ from services.models.stability import NoKeyError
 router = Router()
 # Миддлварь в которой определяются настройки пользователя(выбранная модель)
 router.message.outer_middleware(LLMForUser())
+# Миддлварь в которой достаются старые сообщения(запросы и ответы) к модели из Redis
+router.message.outer_middleware(HistoryMessages())
 # Вешаем на роутер миддлварь для отправления статуса "печатает" при ответе
 router.message.middleware(ChatActionMiddleware())
 
@@ -48,6 +51,13 @@ async def process_start_command(message: Message):
 @router.message(Command(commands="models"))
 async def process_help_command(message: Message, dialog_manager: DialogManager):
     await dialog_manager.start(state=LlmSG.start, mode=StartMode.RESET_STACK)
+
+
+# Хэндлер на команду clear для очистки сохраненных сообщений в Redis для выбранной модели
+@router.message(Command(commands="clear"))
+async def clear_last_messages(message: Message, i18n: TranslatorRunner, last_messages: list):
+    last_messages.clear()
+    await message.answer(i18n.cleared.cache())
 
 
 # Этот хэндлер срабатывает когда приходит звуковое сообщение
@@ -118,27 +128,36 @@ async def get_send_photo(message: Message, largest_photo: PhotoSize, dialog_mana
 
 # Если пользователь прислал текстовое сообщение, и ответ тоже текст
 @router.message(F.text, TextResponse())
-async def text_for_text(message: Message, i18n: TranslatorRunner, db: DB, llm: dict):
+async def text_for_text(message: Message, i18n: TranslatorRunner, db: DB, llm: dict, last_messages: list):
     try:
+        # Добавляем запрос в последние сообщения
+        last_messages.append({"role": "user", "content": message.text})
         # Обрабатываем запрос в зависимости от модели
         response = await select_model_category(llm["llm_category"],
                                                llm["llm_model"],
                                                message.text,
                                                message.from_user.id,
-                                               db)
+                                               db,
+                                               last_messages)
 
         # Если длина сообщения больше 4096 - исключение TelegramBadRequest - message too long
         await message.answer(f'{llm["llm_img"]} {llm["llm_name"]}:\n{response[:4050]}')
         if response[4050:]:
             await message.answer(f'{response[4050:]}')
+        # Добавляем ответ в последние сообщения
+        last_messages.append({"role": "assistant", "content": response})
     # Если parse_mode=Markdown поломан - TelegramBadRequest - can't parse entities...
     except TelegramBadRequest:
         await message.answer(f'{llm["llm_img"]} {llm["llm_name"]}:\n{response[:4050]}', parse_mode='HTML')
         if response[4050:]:
             await message.answer(f'{response[4050:]}', parse_mode='HTML')
+        # Добавляем ответ в последние сообщения
+        last_messages.append({"role": "assistant", "content": response})
     except Exception as ex:
+        # Удаляем последний запрос из последних сообщений, т.к. не получили ответа
+        last_messages.pop()
         logging.error(ex)
-        await message.answer(f'{llm["llm_img"]} {llm["llm_name"]}:\n{i18n.error()}')
+        await message.answer(f'{llm["llm_img"]} {llm["llm_name"]}:\n{i18n.error()}\n{i18n.clear.cache()}')
 
 
 # Если пользователь прислал текстовое сообщение, а ответ будет изображение

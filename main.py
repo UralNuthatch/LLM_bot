@@ -7,6 +7,7 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram_dialog import setup_dialogs
 from fluentogram import TranslatorHub
+from redis import Redis
 from config_data.config import load_config, Config
 from handlers import user_handlers, other_handlers, llm_dialog, active_users, admin_handlers, img_llm_dialog
 from keyboards.set_menu import set_main_menu
@@ -32,6 +33,10 @@ async def main():
 
     # Добавляем пул соединений с БД в диспетчер
     dp.workflow_data.update({'pool': pool})
+
+    # Создаем Redis и добавляем в диспетчер
+    redis = Redis(host=config.redis.redis_host, port=config.redis.redis_port, db=config.redis.redis_db)
+    dp.workflow_data.update({'redis': redis})
 
     # Регистрируем роутеры в диспетчере
     dp.include_router(llm_dialog.llm_dialog)

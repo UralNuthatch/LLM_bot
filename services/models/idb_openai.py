@@ -2,7 +2,7 @@ from openai import OpenAI
 from config_data.config import load_config, Config
 
 
-def response_idb_openai_model(llm_model, text_request):
+def response_idb_openai_model(llm_model, messages):
     config: Config = load_config()
     client = OpenAI(
         api_key=config.api_key_idb,
@@ -10,12 +10,8 @@ def response_idb_openai_model(llm_model, text_request):
     )
 
     completion = client.chat.completions.create(
-    model=llm_model,
-    messages=[
-        {"role": "system", "content": "You are a helpful assistant."},
-        {"role": "user", "content": text_request}
-    ],
-    stream=False
-    )
+                                                model=llm_model,
+                                                messages=messages,
+                                                stream=False)
 
     return completion.choices[0].message.content

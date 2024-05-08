@@ -26,6 +26,7 @@ cryptography==42.0.5
 cssselect2==0.7.0
 curl_cffi==0.6.3
 defusedxml==0.7.1
+Deprecated==1.2.14
 distro==1.9.0
 duckduckgo_search==5.3.0
 environs==11.0.0
@@ -62,8 +63,10 @@ lz4==4.3.3
 magic-filter==1.0.12
 MarkupSafe==2.1.5
 marshmallow==3.21.1
+mss==9.0.1
 multidict==6.0.5
 nest-asyncio==1.6.0
+nodriver==0.29rc2
 numpy==1.26.4
 openai==1.23.3
 orjson==3.10.1
@@ -90,6 +93,7 @@ python-dotenv==1.0.1
 python-socks==2.4.4
 pytz==2024.1
 pywebview==5.1
+redis==5.0.4
 requests==2.31.0
 rsa==4.9
 selenium==4.19.0
@@ -114,6 +118,7 @@ uvicorn==0.29.0
 webencodings==0.5.1
 websockets==12.0
 Werkzeug==3.0.2
+wrapt==1.16.0
 wsproto==1.2.0
 yarl==1.9.4
 zstandard==0.22.0

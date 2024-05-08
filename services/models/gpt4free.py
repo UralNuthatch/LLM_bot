@@ -4,11 +4,11 @@ from g4f.cookies import set_cookies
 
 
 
-def response_gpt4free_model_text(llm_model, text_request: str) -> str:
+def response_gpt4free_model_text(llm_model, messages: list) -> str:
     client = Client()
     response = client.chat.completions.create(
         model=llm_model,
-        messages=[{"role": "user", "content": text_request}],
+        messages=messages,
     )
     return response.choices[0].message.content
 

@@ -3,11 +3,19 @@ from PIL import Image
 from config_data.config import load_config, Config
 
 
-def response_google_model(llm_model, text_request: str):
+def response_google_model(llm_model, text_request: str, messages: list):
         config: Config = load_config()
         genai.configure(api_key=config.api_key)
         model = genai.GenerativeModel(llm_model)
-        response = model.generate_content(text_request)
+
+        google_messages = []
+        for m in messages:
+                google_messages.append({
+                        "role": m["role"] if m["role"] == "user" else "model",    # Меняем assistant на model для роли модели
+                        "parts": [m["content"]]
+                })
+        
+        response = model.generate_content(google_messages)
         return response.text
 
 

@@ -33,3 +33,5 @@ pixels = pixels
 instruction-add-key = To add a key, take a temporary email here https://tempail.com Next, register on https://platform.stability.ai/ using a temporary email - you will receive a registration confirmation letter to it. Confirm and take the API key in the profile https://platform.stability.ai/account/keys
 available-keys = Available keys
 change-model - Change model
+clear-cache = If you see this message too often, try the /clear command - this will clear messages from the bot's cache.
+cleared-cache = cache cleared
