@@ -80,7 +80,7 @@ async def send_audio_text(message: Message, voice_prompt: Voice, bot: Bot, i18n:
         # Преобразование аудиозаписи в текст
         text = recognizer.recognize_google(audio, language="ru-RU")
 
-        await message.answer(f"{llm["llm_img"]} {llm["llm_name"]}:\n{i18n.processing.request()} {text}")
+        await message.answer(f'{llm["llm_img"]} {llm["llm_name"]}:\n{i18n.processing.request()} {text}')
 
         # Добавляем запрос в последние сообщения
         last_messages.append({"role": "user", "content": str(text)})
