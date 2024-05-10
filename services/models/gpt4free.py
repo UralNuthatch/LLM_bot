@@ -10,7 +10,7 @@ def response_gpt4free_model_text(llm_model, messages: list) -> str:
     # Альтернитива - g4f.Provider.Liaobots
     provider = g4f.Provider.Liaobots
 
-    client = Client(provider=provider)
+    client = Client()
 
     messages = [
       {
