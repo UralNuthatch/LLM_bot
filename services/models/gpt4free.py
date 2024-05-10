@@ -6,17 +6,24 @@ from g4f.cookies import set_cookies
 
 
 def response_gpt4free_model_text(llm_model, messages: list) -> str:
-    # Провайдер у которого учитываются последние сообщения
-    # Альтернитива - g4f.Provider.Liaobots
-    provider = g4f.Provider.Liaobots
-
     client = Client()
 
-    messages = [
-      {
-        "role": "system",
-        "content": "You are a helpful assistant."
-      } ] + messages
+    # для gpt-4 работает через Bing, для последних сообщений работает как user и model, а не user и assistant
+    if llm_model == "gpt-4":
+        new_messages = []
+        for m in messages:
+                new_messages.append({
+                        "role": m["role"] if m["role"] == "user" else "model",    # Меняем assistant на model для роли модели
+                        "content": m["content"]
+                })
+        messages = new_messages
+    # для gpt-3.5-turbo как user и assistant
+    else:
+        messages = [
+        {
+            "role": "system",
+            "content": "You are a helpful assistant."
+        } ] + messages
 
     response = client.chat.completions.create(
         model=llm_model,
