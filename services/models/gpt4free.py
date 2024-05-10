@@ -1,8 +1,11 @@
 import requests
+import logging
 import g4f
 from g4f.client import Client
 from g4f.cookies import set_cookies
 
+
+logger = logging.getLogger(__name__)
 
 
 def response_gpt4free_model_text(llm_model, messages: list) -> str:
@@ -26,8 +29,8 @@ def response_gpt4free_model_text(llm_model, messages: list) -> str:
         } ] + messages
 
     for m in messages:
-         print(m)
-    print("------------------------------")
+         logging.warning(m)
+    logging.warning("------------------------------")
 
 
     response = client.chat.completions.create(
