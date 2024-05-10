@@ -8,7 +8,7 @@ from g4f.cookies import set_cookies
 def response_gpt4free_model_text(llm_model, messages: list) -> str:
     # Провайдер у которого учитываются последние сообщения
     # Альтернитива - g4f.Provider.Liaobots
-    provider = g4f.Provider.OpenaiChat
+    provider = g4f.Provider.Liaobots
 
     client = Client(provider=provider)
 
