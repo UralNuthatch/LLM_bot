@@ -25,6 +25,11 @@ def response_gpt4free_model_text(llm_model, messages: list) -> str:
             "content": "You are a helpful assistant."
         } ] + messages
 
+    for m in messages:
+         print(m)
+    print("------------------------------")
+
+
     response = client.chat.completions.create(
         model=llm_model,
         messages=messages,
