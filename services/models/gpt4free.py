@@ -1,11 +1,23 @@
 import requests
+import g4f
 from g4f.client import Client
 from g4f.cookies import set_cookies
 
 
 
 def response_gpt4free_model_text(llm_model, messages: list) -> str:
-    client = Client()
+    # Провайдер у которого учитываются последние сообщения
+    # Альтернитива - g4f.Provider.Liaobots
+    provider = g4f.Provider.OpenaiChat
+
+    client = Client(provider=provider)
+
+    messages = [
+      {
+        "role": "system",
+        "content": "You are a helpful assistant."
+      } ] + messages
+
     response = client.chat.completions.create(
         model=llm_model,
         messages=messages,

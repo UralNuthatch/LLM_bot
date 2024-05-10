@@ -9,6 +9,12 @@ def response_idb_openai_model(llm_model, messages):
         base_url=config.idb_base
     )
 
+    messages = [
+      {
+        "role": "system",
+        "content": "You are a helpful assistant."
+      } ] + messages
+    
     completion = client.chat.completions.create(
                                                 model=llm_model,
                                                 messages=messages,

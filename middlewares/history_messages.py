@@ -17,7 +17,7 @@ class HistoryMessages(BaseMiddleware):
         # gpt-4 - llm_model
 
         # Сколько последних сообщений хранится.Пример: 10 = 5 запросов + 5 ответов
-        MAX_COUNT_MESSAGES = 10
+        MAX_COUNT_MESSAGES = 6
 
         try:
             user: User = data.get('event_from_user')
@@ -33,7 +33,7 @@ class HistoryMessages(BaseMiddleware):
             else:
                 # В Redis список сообщений хранится в json формате
                 last_messages = json.loads(last_messages)
-            
+
             data["last_messages"] = last_messages
 
         except Exception as ex:
