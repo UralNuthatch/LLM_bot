@@ -37,6 +37,7 @@ def response_gpt4free_model_text(llm_model, messages: list) -> str:
         model=llm_model,
         messages=messages,
     )
+    logging.warning(response.provider)
     return response.choices[0].message.content
 
 
