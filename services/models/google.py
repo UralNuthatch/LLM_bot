@@ -14,12 +14,14 @@ def response_google_model(llm_model, text_request: str, messages: list):
                         "role": m["role"] if m["role"] == "user" else "model",    # Меняем assistant на model для роли модели
                         "parts": [m["content"]]
                 })
-        
+
         response = model.generate_content(google_messages)
         return response.text
 
 
 def response_google_model_for_image(img_path, text:str):
+        config: Config = load_config()
+        genai.configure(api_key=config.api_key)
         model = genai.GenerativeModel("gemini-pro-vision")
         with Image.open(img_path) as img:
                 response = model.generate_content([text, img], stream=True)
