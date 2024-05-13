@@ -26,7 +26,7 @@ class DB:
 
 
     async def get_llms(self) -> Record:
-        return await self.connection.fetch('SELECT id, name, img, model, category FROM llm')
+        return await self.connection.fetch('SELECT id, name, img, model, category FROM llm ORDER BY id')
 
 
     async def set_llm_to_user(self, telegram_id: int, telegram_username: str, telegram_name: str, llm_id: int):

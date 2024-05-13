@@ -2,6 +2,7 @@ from openai import OpenAI
 from config_data.config import load_config, Config
 
 
+# Названия моделей: codellama-70b, mixtral-8x7b
 def response_idb_openai_model(llm_model, messages):
     config: Config = load_config()
     client = OpenAI(
@@ -14,7 +15,7 @@ def response_idb_openai_model(llm_model, messages):
         "role": "system",
         "content": "You are a helpful assistant."
       } ] + messages
-    
+
     completion = client.chat.completions.create(
                                                 model=llm_model,
                                                 messages=messages,

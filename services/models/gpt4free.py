@@ -11,13 +11,6 @@ logger = logging.getLogger(__name__)
 def response_gpt4free_model_text(llm_model, messages: list) -> str:
     client = Client()
 
-    messages = [
-        {
-            "role": "system",
-            "content": "You are a helpful assistant."
-        } ] + messages
-
-
     response = client.chat.completions.create(
         model=llm_model,
         messages=messages,
