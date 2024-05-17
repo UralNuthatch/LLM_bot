@@ -51,7 +51,7 @@ async def response_stability_img_model(text_request: str, telegram_id: int, db: 
     )
 
     if response.status_code == 200:
-        with open(f"./{telegram_id}.png", 'wb') as file:
+        with open(f"./{telegram_id}_0.png", 'wb') as file:
             file.write(response.content)
         # Меняем в базе кол-во оставшихся кредитов для ключа
         await db.waste_credits(id, price)

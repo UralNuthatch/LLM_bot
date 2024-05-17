@@ -25,6 +25,7 @@ class Config:
     api_key: str    # API ключ Gemini (можно получить на https://makersuite.google.com/app/apikey)
     api_key_idb: str # API_KEY https://idb.ai
     api_key_fireworks: str # https://fireworks.ai/api-keys
+    api_key_openai: str
     idb_base: str
     db: DatabaseConfig
     redis: RedisConfig
@@ -36,7 +37,7 @@ def load_config(path: str | None = None) -> Config:
 
     return Config(tgbot=TgBot(token=env("BOT_TOKEN")),
                   api_key=env("API_KEY"), api_key_idb=env("API_KEY_IDB"),
-                  api_key_fireworks=env("API_KEY_FIREWORKS"), idb_base=env("IDB_BASE"),
+                  api_key_fireworks=env("API_KEY_FIREWORKS"), api_key_openai=env("API_KEY_OPENAI"), idb_base=env("IDB_BASE"),
                   db=DatabaseConfig(database=env("DATABASE"), db_host=env("DB_HOST"),
                                     db_user=env("DB_USER"), db_password=env("DB_PASSWORD")),
                     redis=RedisConfig(redis_host=env("REDIS_HOST"), redis_port=env("REDIS_PORT"), redis_db=env("REDIS_DB")))

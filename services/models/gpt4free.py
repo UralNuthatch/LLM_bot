@@ -19,9 +19,9 @@ def response_gpt4free_model_text(llm_model, messages: list) -> str:
     return response.choices[0].message.content
 
 
-async def response_gpt4free_model_img(model, prompt: str, telegram_id: int) -> str:
+def response_gpt4free_model_img(model, prompt: str, telegram_id: int) -> str:
     set_cookies(".bing.com", {
-    "_U": "1YbGJa7X25mTTMqAKJtN7Z1YUiPRQW6QzebAqx4gXh5_VmGwnykcAr0JZHsXYMPgk5x1js-s6EP3oThtxb20dbCjazpSHYw0oOEJZa25OcxfbLqBE-i1Y3inbZwMsf0HVnbo6M8zealJkuktaur4U7mReYO3OK0Ov41vHjuNqggMXZhpK83gAXtbxFz-Fiq_EBIx3fZarGEM_jazEcDDTNg"})
+    "_U": "1lS3CvJhBbpB1eB3m18u4EJJMwkkPpTIXeBFGNSZjlRXpklTcJq4HMFiZwXhhmWNapR_cjqsKcvuVdEqz7UwEqMg3ieaDmYC8CPo18P0S3Hfv_Ezc_cXGZsLm5N4Jm1JwptwlXYNtnKDKJFojZ3OymNkonNYEfbgPgw4pqUv6ct7xM3_Y6LC4Y1XzpURCteJOoM0o-v4RyQKOkc2OzuFh-OaLo3mZ4jMOH3GRzuHB7fg"})
 
     set_cookies(".google.com", {
   "__Secure-1PSID": "g.a000jAjvMQJostwaKWWLfZADL5B3EnAFCzdjrUe2bRmueUL8XzZHHahJ-7mH-OFc4VnBKbF2WwACgYKAcESAQASFQHGX2MiPoT9hJqEiL_9ioaD7Ao59BoVAUF8yKo67p0SwTmJBVT7LXO9SjUJ0076"
@@ -45,14 +45,16 @@ async def response_gpt4free_model_img(model, prompt: str, telegram_id: int) -> s
             prompt=prompt,
         )
 
-    image_url = response.data[0].url
+    imgages_count = 4
+    if model == "gemini-pro":
+        imgages_count = 1
 
-    # Скачиваем файл на локальную машину
-    response = requests.get(image_url)
-    with open(f"{telegram_id}.png", "wb") as file:
-        file.write(response.content)
-
-    return 'image'
+    # Скачиваем файлы на локальную машину
+    for i in range(imgages_count):
+        image_url = response.data[i].url
+        img_data = requests.get(image_url)
+        with open(f"{telegram_id}_{i}.png", "wb") as file:
+            file.write(img_data.content)
 
 
 # _U:"1GKwFA2dVQaxvQUBoDC6yDtFzWFIe1pDSkenz_nxwnT_o0SEbryDClwOiRYOGaJdcT5Am3SbuIn9VyX5nUPpZ61pEzO3hLhcJYKaRyCEnqQ12YmX3AoLJfTNBaTsKgdOW53eyvju1zt3Qou25dXoyCMk46RLJBcYkHO_vm1USto4wbDAkzcBHIdqzMzZha0BKewapSbYsUc7puM6vO2QLMADzMwmRj317FmQZK0XzJ9o"

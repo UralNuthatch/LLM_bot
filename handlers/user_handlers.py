@@ -146,12 +146,15 @@ async def send_audio_img(message: Message, voice_prompt: Voice, bot: Bot, i18n: 
         # Обрабатываем запрос в зависимости от модели
         await select_model_category(llm["llm_category"], llm["llm_model"], str(text), message.from_user.id, db)
 
-        if os.path.exists(f"{message.chat.id}.png"):
-            img = FSInputFile(f"{message.chat.id}.png")
-            if os.path.getsize(f"{message.chat.id}.png") < 10485760:
-                await message.answer_photo(img)
-            await message.answer_document(img)
-            os.remove(f"{message.chat.id}.png")
+        # 4 изображения
+        for i in range(4):
+            if os.path.exists(f"{message.chat.id}_{i}.png"):
+                img = FSInputFile(f"{message.chat.id}_{i}.png")
+                if os.path.getsize(f"{message.chat.id}_{i}.png") < 10485760:
+                    await message.answer_photo(img)
+                else:
+                    await message.answer_document(img)
+                os.remove(f"{message.chat.id}_{i}.png")
     # Если закончились ключи
     except NoKeyError:
         await message.answer(i18n.keys.ended())
@@ -231,13 +234,15 @@ async def text_for_image(message: Message, bot: Bot, i18n: TranslatorRunner, db:
                                                message.text,
                                                message.from_user.id,
                                                db)
-
-        if os.path.exists(f"{message.chat.id}.png"):
-            img = FSInputFile(f"{message.chat.id}.png")
-            if os.path.getsize(f"{message.chat.id}.png") < 10485760:
-                await message.answer_photo(img)
-            await message.answer_document(img)
-            os.remove(f"{message.chat.id}.png")
+        # 4 изображения
+        for i in range(4):
+            if os.path.exists(f"{message.chat.id}_{i}.png"):
+                img = FSInputFile(f"{message.chat.id}_{i}.png")
+                if os.path.getsize(f"{message.chat.id}_{i}.png") < 10485760:
+                    await message.answer_photo(img)
+                else:
+                    await message.answer_document(img)
+                os.remove(f"{message.chat.id}_{i}.png")
     # Если закончились ключи
     except NoKeyError:
         await message.answer(i18n.keys.ended())

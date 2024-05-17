@@ -4,6 +4,7 @@ from services.models.gpt4free import response_gpt4free_model_text, response_gpt4
 from services.models.idb_openai import response_idb_openai_model
 from services.models.stability import response_stability_img_model
 from services.models.fireworks import response_fireworks
+from services.models.openai import response_openai
 from database.database import DB
 
 
@@ -18,6 +19,8 @@ async def select_model_category(llm_category: int, llm_model, text_request: str,
         case 4:
             return await response_stability_img_model(text_request, telegram_id, db)
         case 5:
-            return await response_gpt4free_model_img(llm_model, text_request, telegram_id)
+            return response_gpt4free_model_img(llm_model, text_request, telegram_id)
         case 6:
             return response_fireworks(llm_model, messages)
+        case 7:
+            return response_openai(llm_model, messages)
