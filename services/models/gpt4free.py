@@ -21,7 +21,7 @@ def response_gpt4free_model_text(llm_model, messages: list) -> str:
 
 def response_gpt4free_model_img(model, prompt: str, telegram_id: int) -> str:
     set_cookies(".bing.com", {
-    "_U": "1lS3CvJhBbpB1eB3m18u4EJJMwkkPpTIXeBFGNSZjlRXpklTcJq4HMFiZwXhhmWNapR_cjqsKcvuVdEqz7UwEqMg3ieaDmYC8CPo18P0S3Hfv_Ezc_cXGZsLm5N4Jm1JwptwlXYNtnKDKJFojZ3OymNkonNYEfbgPgw4pqUv6ct7xM3_Y6LC4Y1XzpURCteJOoM0o-v4RyQKOkc2OzuFh-OaLo3mZ4jMOH3GRzuHB7fg"})
+    "_U": "1GKwFA2dVQaxvQUBoDC6yDtFzWFIe1pDSkenz_nxwnT_o0SEbryDClwOiRYOGaJdcT5Am3SbuIn9VyX5nUPpZ61pEzO3hLhcJYKaRyCEnqQ12YmX3AoLJfTNBaTsKgdOW53eyvju1zt3Qou25dXoyCMk46RLJBcYkHO_vm1USto4wbDAkzcBHIdqzMzZha0BKewapSbYsUc7puM6vO2QLMADzMwmRj317FmQZK0XzJ9o"})
 
     set_cookies(".google.com", {
   "__Secure-1PSID": "g.a000jAjvMQJostwaKWWLfZADL5B3EnAFCzdjrUe2bRmueUL8XzZHHahJ-7mH-OFc4VnBKbF2WwACgYKAcESAQASFQHGX2MiPoT9hJqEiL_9ioaD7Ao59BoVAUF8yKo67p0SwTmJBVT7LXO9SjUJ0076"

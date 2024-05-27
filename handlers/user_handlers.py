@@ -193,6 +193,8 @@ async def get_send_photo(message: Message, largest_photo: PhotoSize, dialog_mana
 @router.message(F.text, TextResponse())
 async def text_for_text(message: Message, i18n: TranslatorRunner, db: DB, llm: dict, last_messages: list):
     try:
+        # Отправляем статус печатает
+        await message.bot.send_chat_action(message.chat.id, "typing")
         # Добавляем запрос в последние сообщения
         last_messages.append({"role": "user", "content": message.text})
         # Обрабатываем запрос в зависимости от модели
