@@ -2,7 +2,7 @@ import logging
 import json
 from typing import Any, Awaitable, Callable, Dict
 from aiogram import BaseMiddleware
-from aiogram.types import TelegramObject, User
+from aiogram.types import TelegramObject, User, Message, Chat
 
 
 logger = logging.getLogger(__name__)
@@ -25,17 +25,15 @@ class HistoryMessages(BaseMiddleware):
         # 123456789_history: ["Сообщение_1", "Сообщение_2", ..., "Сообщение_n"]
         # 123456789 - chat.id группы/супергруппы
 
-        # Сколько последних сообщений истории хранится
+        # Сколько последних сообщений истории группы хранится
         MAX_COUNT_HISTORY = 100
 
         try:
-            user: User = data.get('event_chat')
+            chat: Chat = data.get('event_chat')
             #llm_model = data['llm']["llm_model"]
             llm_model = "all"
 
-            # print(data)
-
-            user_llm_key = f"{str(user.id)}_messages_{llm_model}"
+            user_llm_key = f"{str(chat.id)}_messages_{llm_model}"
 
             last_messages = data["redis"].get(user_llm_key)
 
@@ -48,8 +46,28 @@ class HistoryMessages(BaseMiddleware):
 
             data["last_messages"] = last_messages
 
+
+            # Для групп и супергрупп (история сообщений)
+            if chat.type != "private":
+                if not data.get('event_update').message.text.startswith("/"):
+                    history_key = f"{str(chat.id)}_history"
+                    history = data["redis"].get(history_key)
+                    # Если истории пока нет
+                    if history is None:
+                        history = []
+                    else:
+                        # В Redis список сообщений хранится в json формате
+                        history = json.loads(history)
+
+                    # Сразу добавим новое сообщение в историю
+                    history.append(data.get('event_update').message.text)
+
+                    data["history"] = history
+
+
         except Exception as ex:
             data["last_messages"] = []
+            data["history"] = []
             logging.error(ex)
 
         await handler(event, data)
@@ -58,3 +76,11 @@ class HistoryMessages(BaseMiddleware):
         last_messages = json.dumps(last_messages[-MAX_COUNT_MESSAGES:])
         # Добавляем в Redis
         data["redis"].set(user_llm_key, last_messages)
+
+
+        # Для групп и супергрупп (история сообщений)
+        if chat.type != "private":
+            if not data.get('event_update').message.text.startswith("/"):
+                history = json.dumps(history[-MAX_COUNT_HISTORY:])
+                # Добавляем в Redis
+                data["redis"].set(history_key, history)

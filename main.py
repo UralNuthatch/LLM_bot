@@ -63,7 +63,7 @@ async def main():
                                 format='[{asctime}] #{levelname:8} {filename}:'
                                         '{lineno} - {name} - {message}',
                                 style='{',
-                                level=logging.INFO)
+                                level=logging.WARNING)
     logger.warning("Starting bot...")
 
     # Регистрируем асинхронную функцию в диспетчере,

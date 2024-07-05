@@ -195,14 +195,19 @@ async def get_send_photo(message: Message, largest_photo: PhotoSize, dialog_mana
 @router.message(Command(commands=["bot", "бот"]), TextResponse(), ChatTypeFilter(["group", "supergroup"]))
 async def text_for_text(message: Message, i18n: TranslatorRunner, db: DB, llm: dict, last_messages: list):
     try:
+        text = message.text
+        # Для групповых чатов
+        if message.chat.type != "private":
+            text = text.lstrip("/bot").lstrip("/бот")
+        print("text = ", text)
         # Отправляем статус печатает
         await message.bot.send_chat_action(message.chat.id, "typing")
         # Добавляем запрос в последние сообщения
-        last_messages.append({"role": "user", "content": message.text})
+        last_messages.append({"role": "user", "content": text})
         # Обрабатываем запрос в зависимости от модели
         response = await select_model_category(llm["llm_category"],
                                                llm["llm_model"],
-                                               message.text,
+                                               text,
                                                message.chat.id,
                                                db,
                                                last_messages)
@@ -233,10 +238,14 @@ async def text_for_text(message: Message, i18n: TranslatorRunner, db: DB, llm: d
 @flags.chat_action("upload_photo")
 async def text_for_image(message: Message, bot: Bot, i18n: TranslatorRunner, db: DB, llm: dict):
     try:
+        text = message.text
+        # Для групповых чатов
+        if message.chat.type != "private":
+            text = text.lstrip("/bot").lstrip("/бот")
         # Обрабатываем запрос в зависимости от модели
         await select_model_category(llm["llm_category"],
                                                llm["llm_model"],
-                                               message.text,
+                                               text,
                                                message.chat.id,
                                                db)
         # 4 изображения
@@ -250,7 +259,8 @@ async def text_for_image(message: Message, bot: Bot, i18n: TranslatorRunner, db:
                 os.remove(f"{message.chat.id}_{i}.png")
     # Если закончились ключи
     except NoKeyError:
-        await message.answer(i18n.keys.ended())
+        if message.chat.type == "private":
+            await message.answer(i18n.keys.ended())
         await send_no_key(bot)
     # Обрабатываем другие ошибки
     except Exception as ex:
