@@ -199,7 +199,6 @@ async def text_for_text(message: Message, i18n: TranslatorRunner, db: DB, llm: d
         # Для групповых чатов
         if message.chat.type != "private":
             text = text.lstrip("/bot").lstrip("/бот")
-        print("text = ", text)
         # Отправляем статус печатает
         await message.bot.send_chat_action(message.chat.id, "typing")
         # Добавляем запрос в последние сообщения
