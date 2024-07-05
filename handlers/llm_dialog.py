@@ -19,7 +19,7 @@ async def set_llm(callback: CallbackQuery, widget: Select, dialog_manager: Dialo
         i18n: TranslatorRunner = dialog_manager.middleware_data.get('i18n')
         llm: Record = await db.set_llm_to_user(telegram_id=callback.from_user.id, telegram_username=callback.from_user.username,
                                 telegram_name=callback.from_user.first_name, llm_id=int(item_id))
-        await callback.bot.send_message(chat_id=callback.from_user.id, text=f'{llm[0].get("img")} {llm[0].get("name")}\n{i18n.send.request()}')
+        await callback.message.answer(f'{llm[0].get("img")} {llm[0].get("name")}\n{i18n.send.request()}')
     except:
         await callback.message.answer(i18n.error())
     finally:

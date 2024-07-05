@@ -19,6 +19,7 @@ from alerts.to_admin import send_no_key
 from middlewares.llm_for_user import LLMForUser
 from middlewares.history_messages import HistoryMessages
 from filters.type_response import TextResponse, ImgResponse
+from filters.chat_type import ChatTypeFilter
 from services.models.stability import NoKeyError
 
 
@@ -37,8 +38,8 @@ config: Config = load_config()
 logger = logging.Logger(__name__)
 
 
-# Этот хэндлер срабатывает на команду start
-@router.message(CommandStart())
+# Этот хэндлер срабатывает на команду start (только в приватных чатах)
+@router.message(CommandStart(), ChatTypeFilter("private"))
 async def process_start_command(message: Message):
     try:
         img = FSInputFile(f"start.png")
@@ -60,8 +61,8 @@ async def clear_last_messages(message: Message, i18n: TranslatorRunner, last_mes
     await message.answer(i18n.cleared.cache())
 
 
-# Этот хэндлер срабатывает когда приходит звуковое сообщение, а в ответ будет текст
-@router.message(F.voice.as_("voice_prompt"), TextResponse())
+# Этот хэндлер срабатывает когда приходит звуковое сообщение, а в ответ будет текст (только в приватных чатах)
+@router.message(F.voice.as_("voice_prompt"), TextResponse(), ChatTypeFilter("private"))
 async def send_audio_text(message: Message, voice_prompt: Voice, bot: Bot, i18n: TranslatorRunner, db: DB, llm: dict, last_messages: list):
     try:
         # Скачивание файла в ogg формате
@@ -86,7 +87,7 @@ async def send_audio_text(message: Message, voice_prompt: Voice, bot: Bot, i18n:
         last_messages.append({"role": "user", "content": str(text)})
 
         # Обрабатываем запрос в зависимости от модели
-        response = await select_model_category(llm["llm_category"], llm["llm_model"], str(text), message.from_user.id, db, last_messages)
+        response = await select_model_category(llm["llm_category"], llm["llm_model"], str(text), message.chat.id, db, last_messages)
 
         # Если длина сообщения больше 4096 - исключение TelegramBadRequest - message too long
         await message.answer(f'{llm["llm_img"]} {llm["llm_name"]}:\n{response[:4050]}')
@@ -119,7 +120,7 @@ async def send_audio_text(message: Message, voice_prompt: Voice, bot: Bot, i18n:
 
 
 # Этот хэндлер срабатывает когда приходит звуковое сообщение, а в ответ будет изображение
-@router.message(F.voice.as_("voice_prompt"), ImgResponse())
+@router.message(F.voice.as_("voice_prompt"), ImgResponse(), ChatTypeFilter("private"))
 @flags.chat_action("upload_photo")
 async def send_audio_img(message: Message, voice_prompt: Voice, bot: Bot, i18n: TranslatorRunner, db: DB, llm: dict):
     try:
@@ -144,7 +145,7 @@ async def send_audio_img(message: Message, voice_prompt: Voice, bot: Bot, i18n: 
         await message.answer(f'{llm["llm_img"]} {llm["llm_name"]}:\n{i18n.processing.request()} {text}')
 
         # Обрабатываем запрос в зависимости от модели
-        await select_model_category(llm["llm_category"], llm["llm_model"], str(text), message.from_user.id, db)
+        await select_model_category(llm["llm_category"], llm["llm_model"], str(text), message.chat.id, db)
 
         # 4 изображения
         for i in range(4):
@@ -173,7 +174,7 @@ async def send_audio_img(message: Message, voice_prompt: Voice, bot: Bot, i18n: 
 
 
 # Этот хэндлер будет обрабатывать изображения от пользоваетеля с подписью или без
-@router.message(F.photo[-1].as_("largest_photo"))
+@router.message(F.photo[-1].as_("largest_photo"), ChatTypeFilter("private"))
 async def get_send_photo(message: Message, largest_photo: PhotoSize, dialog_manager:DialogManager, i18n: TranslatorRunner):
         # Если изображение от пользователя пришло без подписи, то ставим стандартный запрос
         if message.caption:
@@ -183,14 +184,15 @@ async def get_send_photo(message: Message, largest_photo: PhotoSize, dialog_mana
 
         # Получаем путь до изображения
         file = await message.bot.get_file(file_id=largest_photo.file_id)
-        img_path = f"input_{message.from_user.id}.jpeg"
+        img_path = f"input_{message.chat.id}.jpeg"
         # Скачиваем файл на локальную машину
         await message.bot.download_file(file_path=file.file_path, destination=img_path)
         await dialog_manager.start(state=ImgLlmSelectSG.start, mode=StartMode.RESET_STACK, data={'img': img_path, 'text': text})
 
 
 # Если пользователь прислал текстовое сообщение, и ответ тоже текст
-@router.message(F.text, TextResponse())
+@router.message(F.text, TextResponse(), ChatTypeFilter("private"))
+@router.message(Command(commands=["bot", "бот"]), TextResponse(), ChatTypeFilter(["group", "supergroup"]))
 async def text_for_text(message: Message, i18n: TranslatorRunner, db: DB, llm: dict, last_messages: list):
     try:
         # Отправляем статус печатает
@@ -201,7 +203,7 @@ async def text_for_text(message: Message, i18n: TranslatorRunner, db: DB, llm: d
         response = await select_model_category(llm["llm_category"],
                                                llm["llm_model"],
                                                message.text,
-                                               message.from_user.id,
+                                               message.chat.id,
                                                db,
                                                last_messages)
 
@@ -226,7 +228,8 @@ async def text_for_text(message: Message, i18n: TranslatorRunner, db: DB, llm: d
 
 
 # Если пользователь прислал текстовое сообщение, а ответ будет изображение
-@router.message(F.text, ImgResponse())
+@router.message(F.text, ImgResponse(), ChatTypeFilter("private"))
+@router.message(Command(commands=["bot", "бот"]), ImgResponse(), ChatTypeFilter(["group", "supergroup"]))
 @flags.chat_action("upload_photo")
 async def text_for_image(message: Message, bot: Bot, i18n: TranslatorRunner, db: DB, llm: dict):
     try:
@@ -234,7 +237,7 @@ async def text_for_image(message: Message, bot: Bot, i18n: TranslatorRunner, db:
         await select_model_category(llm["llm_category"],
                                                llm["llm_model"],
                                                message.text,
-                                               message.from_user.id,
+                                               message.chat.id,
                                                db)
         # 4 изображения
         for i in range(4):

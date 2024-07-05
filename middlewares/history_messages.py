@@ -15,13 +15,25 @@ class HistoryMessages(BaseMiddleware):
         # 123456789_messages_gpt-4: [{"role": "user", "content": "hi"}, {"role": "assistant", "content": "Hello. How I can help you?"}, ...]
         # 123456789 - telegram_id
         # gpt-4 - llm_model
+        # Updated 05.07.2024 -> 123456789_messages_all
 
         # Сколько последних сообщений хранится.Пример: 10 = 5 запросов + 5 ответов
         MAX_COUNT_MESSAGES = 6
 
+
+        # Для групп будет сохраняться история текстовых сообщений в виде:
+        # 123456789_history: ["Сообщение_1", "Сообщение_2", ..., "Сообщение_n"]
+        # 123456789 - chat.id группы/супергруппы
+
+        # Сколько последних сообщений истории хранится
+        MAX_COUNT_HISTORY = 100
+
         try:
-            user: User = data.get('event_from_user')
-            llm_model = data['llm']["llm_model"]
+            user: User = data.get('event_chat')
+            #llm_model = data['llm']["llm_model"]
+            llm_model = "all"
+
+            # print(data)
 
             user_llm_key = f"{str(user.id)}_messages_{llm_model}"
 
