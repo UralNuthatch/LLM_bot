@@ -20,6 +20,7 @@ from middlewares.llm_for_user import LLMForUser
 from middlewares.history_messages import HistoryMessages
 from filters.type_response import TextResponse, ImgResponse
 from filters.chat_type import ChatTypeFilter
+from filters.draw_filer import DrawWrongModelFilter
 from services.models.stability import NoKeyError
 
 
@@ -190,6 +191,55 @@ async def get_send_photo(message: Message, largest_photo: PhotoSize, dialog_mana
         await dialog_manager.start(state=ImgLlmSelectSG.start, mode=StartMode.RESET_STACK, data={'img': img_path, 'text': text})
 
 
+# Если пользователь прислал текстовое сообщение, а ответ будет изображение
+@router.message(F.text, ImgResponse(), ChatTypeFilter("private"))
+@router.message(F.text, TextResponse(), DrawWrongModelFilter(), ChatTypeFilter("private"))
+@router.message(Command(commands=["bot", "бот"]), ImgResponse(), ChatTypeFilter(["group", "supergroup"]))
+@router.message(Command(commands=["bot", "бот"]), TextResponse(), DrawWrongModelFilter(), ChatTypeFilter(["group", "supergroup"]))
+@flags.chat_action("upload_photo")
+async def text_for_image(message: Message, bot: Bot, i18n: TranslatorRunner, db: DB, llm: dict):
+    try:
+        text = message.text
+        # Для групповых чатов
+        if message.chat.type != "private":
+            text = text.lstrip("/bot").lstrip("/бот")
+        # Если выбрана текстовая модель, а пользователь начал свой запрос с "нарисуй"
+        if DrawWrongModelFilter()(message=message, llm=llm):
+            # Выберем какую-то img-модель по-умолчанию
+            model = "dall-e-3"
+            llm_category, llm_model, llm_name, llm_img, llm_response = await db.get_data_from_model(model)
+            llm['llm_category'] = llm_category
+            llm['llm_model'] = llm_model
+            llm['llm_name'] = llm_name
+            llm['llm_img'] = llm_img
+            llm['llm_response'] = llm_response
+
+        # Обрабатываем запрос в зависимости от модели
+        await select_model_category(llm["llm_category"],
+                                               llm["llm_model"],
+                                               text,
+                                               message.chat.id,
+                                               db)
+        # 4 изображения
+        for i in range(4):
+            if os.path.exists(f"{message.chat.id}_{i}.png"):
+                img = FSInputFile(f"{message.chat.id}_{i}.png")
+                if os.path.getsize(f"{message.chat.id}_{i}.png") < 10485760:
+                    await message.answer_photo(img)
+                else:
+                    await message.answer_document(img)
+                os.remove(f"{message.chat.id}_{i}.png")
+    # Если закончились ключи
+    except NoKeyError:
+        if message.chat.type == "private":
+            await message.answer(i18n.keys.ended())
+        await send_no_key(bot)
+    # Обрабатываем другие ошибки
+    except Exception as ex:
+        logging.error(ex)
+        await message.answer(f'{llm["llm_img"]} {llm["llm_name"]}:\n{i18n.error()}')
+
+
 # Если пользователь прислал текстовое сообщение, и ответ тоже текст
 @router.message(F.text, TextResponse(), ChatTypeFilter("private"))
 @router.message(Command(commands=["bot", "бот"]), TextResponse(), ChatTypeFilter(["group", "supergroup"]))
@@ -229,39 +279,3 @@ async def text_for_text(message: Message, i18n: TranslatorRunner, db: DB, llm: d
         last_messages.pop()
         logging.error(ex)
         await message.answer(f'{llm["llm_img"]} {llm["llm_name"]}:\n{i18n.error()}\n{i18n.clear.cache()}')
-
-
-# Если пользователь прислал текстовое сообщение, а ответ будет изображение
-@router.message(F.text, ImgResponse(), ChatTypeFilter("private"))
-@router.message(Command(commands=["bot", "бот"]), ImgResponse(), ChatTypeFilter(["group", "supergroup"]))
-@flags.chat_action("upload_photo")
-async def text_for_image(message: Message, bot: Bot, i18n: TranslatorRunner, db: DB, llm: dict):
-    try:
-        text = message.text
-        # Для групповых чатов
-        if message.chat.type != "private":
-            text = text.lstrip("/bot").lstrip("/бот")
-        # Обрабатываем запрос в зависимости от модели
-        await select_model_category(llm["llm_category"],
-                                               llm["llm_model"],
-                                               text,
-                                               message.chat.id,
-                                               db)
-        # 4 изображения
-        for i in range(4):
-            if os.path.exists(f"{message.chat.id}_{i}.png"):
-                img = FSInputFile(f"{message.chat.id}_{i}.png")
-                if os.path.getsize(f"{message.chat.id}_{i}.png") < 10485760:
-                    await message.answer_photo(img)
-                else:
-                    await message.answer_document(img)
-                os.remove(f"{message.chat.id}_{i}.png")
-    # Если закончились ключи
-    except NoKeyError:
-        if message.chat.type == "private":
-            await message.answer(i18n.keys.ended())
-        await send_no_key(bot)
-    # Обрабатываем другие ошибки
-    except Exception as ex:
-        logging.error(ex)
-        await message.answer(f'{llm["llm_img"]} {llm["llm_name"]}:\n{i18n.error()}')

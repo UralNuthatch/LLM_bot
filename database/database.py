@@ -67,3 +67,8 @@ class DB:
 
     async def all_keys(self, credits=0):
         return await self.connection.fetch('SELECT id, left(key, 15), credits FROM stability_keys WHERE credits > $1', credits)
+
+
+    async def get_data_from_model(self, model: str):
+        llm = await self.connection.fetchrow('SELECT id, name, model, category, img, response FROM llm WHERE model = $1', model)
+        return (llm.get("category"), llm.get('model'), llm.get('name'), llm.get('img'), llm.get('response'))
