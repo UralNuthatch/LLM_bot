@@ -5,7 +5,7 @@ import speech_recognition as sr
 
 from aiogram import Bot, Router, F, flags
 from aiogram.types import Message, PhotoSize, Voice, FSInputFile
-from aiogram.filters import CommandStart, Command
+from aiogram.filters import CommandStart, Command, CommandObject
 from aiogram.utils.chat_action import ChatActionMiddleware
 from aiogram_dialog import DialogManager, StartMode
 from aiogram.exceptions import TelegramBadRequest
@@ -274,6 +274,68 @@ async def text_for_text(message: Message, i18n: TranslatorRunner, db: DB, llm: d
             await message.answer(f'{response[4050:]}', parse_mode='HTML')
         # Добавляем ответ в последние сообщения
         last_messages.append({"role": "assistant", "content": response})
+    except Exception as ex:
+        # Удаляем последний запрос из последних сообщений, т.к. не получили ответа
+        last_messages.pop()
+        logging.error(ex)
+        await message.answer(f'{llm["llm_img"]} {llm["llm_name"]}:\n{i18n.error()}\n{i18n.clear.cache()}')
+
+
+
+# Команда для анализа последних сообщений в чате группы:
+# /history 100 Дополнительные условия
+# 100 - messages_count - кол-во последних соощений для анализа
+# Дополнительные условия - add_text - любой свой запрос дополнительно
+# команда может быть в сокращенном виде: /history; /history 50; /history кто отправил больше всех сообщений?;
+@router.message(Command(commands=["history", "история"]))
+async def history_analysis(message: Message, command: CommandObject, i18n: TranslatorRunner, db: DB, llm: dict, last_messages: list, history: list):
+    try:
+        messages_count = 100
+        # add_text - дополнительный запрос
+        add_text = ""
+        text = "Проанализируй историю сообщений из чата и выдели самое главное. "
+        if not command.args is None:
+            commands = command.args.split(" ", maxsplit=1)
+            if commands[0].isdigit():
+                messages_count = int(commands[0])
+                if len(commands) > 1:
+                    add_text = commands[1]
+            else:
+                add_text = " ".join(commands)
+        # Собираем вместе весь запрос для анализа истории чата + доп. запрос + сама история чата
+        text = text + add_text + " Чат: " + "\n\n".join(history[:messages_count])
+        #request_text = [{"role": "user", "content": text}]
+
+        # Отправляем статус печатает
+        await message.bot.send_chat_action(message.chat.id, "typing")
+        # Очищаем последние сообщения
+        last_messages.clear()
+        # Добавляем запрос в последние сообщения
+        last_messages.append({"role": "user", "content": text})
+
+        # Обрабатываем запрос в зависимости от модели
+        response = await select_model_category(llm["llm_category"],
+                                               llm["llm_model"],
+                                               "",
+                                               message.chat.id,
+                                               db,
+                                               last_messages)
+
+        # Если длина сообщения больше 4096 - исключение TelegramBadRequest - message too long
+        await message.answer(f'{llm["llm_img"]} {llm["llm_name"]}:\n{response[:4050]}')
+        if response[4050:]:
+            await message.answer(f'{response[4050:]}')
+        # Добавляем ответ в последние сообщения
+        last_messages.append({"role": "assistant", "content": response})
+
+    # Если parse_mode=Markdown поломан - TelegramBadRequest - can't parse entities...
+    except TelegramBadRequest:
+        await message.answer(f'{llm["llm_img"]} {llm["llm_name"]}:\n{response[:4050]}', parse_mode='HTML')
+        if response[4050:]:
+            await message.answer(f'{response[4050:]}', parse_mode='HTML')
+        # Добавляем ответ в последние сообщения
+        last_messages.append({"role": "assistant", "content": response})
+
     except Exception as ex:
         # Удаляем последний запрос из последних сообщений, т.к. не получили ответа
         last_messages.pop()

@@ -46,10 +46,9 @@ class HistoryMessages(BaseMiddleware):
 
             data["last_messages"] = last_messages
 
-
             # Для групп и супергрупп (история сообщений)
             if chat.type != "private":
-                if not data.get('event_update').message.text.startswith("/"):
+                if not data.get('event_update').message.text.startswith("/") or data.get('event_update').message.text.startswith("/history") or data.get('event_update').message.text.startswith("/история"):
                     history_key = f"{str(chat.id)}_history"
                     history = data["redis"].get(history_key)
                     # Если истории пока нет
@@ -59,8 +58,10 @@ class HistoryMessages(BaseMiddleware):
                         # В Redis список сообщений хранится в json формате
                         history = json.loads(history)
 
-                    # Сразу добавим новое сообщение в историю
-                    history.append(data.get('event_update').message.text)
+                    if not data.get('event_update').message.text.startswith("/history") and not data.get('event_update').message.text.startswith("/история"):
+                        # Сразу добавим новое сообщение в историю
+                        new_message = "Пользователь: " + data.get('event_update').message.from_user.username + "\n" + "Сообщение: " + data.get('event_update').message.text
+                        history.append(new_message)
 
                     data["history"] = history
 

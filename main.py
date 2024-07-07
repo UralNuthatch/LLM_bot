@@ -9,7 +9,7 @@ from aiogram_dialog import setup_dialogs
 from fluentogram import TranslatorHub
 from redis import Redis
 from config_data.config import load_config, Config
-from handlers import user_handlers, other_handlers, llm_dialog, active_users, admin_handlers, img_llm_dialog
+from handlers import user_handlers, other_handlers, llm_dialog, active_users, admin_handlers, img_llm_dialog, group_handlers
 from keyboards.set_menu import set_main_menu
 from middlewares.db import DbSessionMiddleware
 from middlewares.i18n import TranslatorRunnerMiddleware
@@ -47,6 +47,7 @@ async def main():
     dp.include_router(admin_handlers.router)
     dp.include_router(admin_handlers.keys_dialog)
     dp.include_router(user_handlers.router)
+    #dp.include_router(group_handlers.router)
     setup_dialogs(dp)
     dp.include_router(active_users.router)
     dp.include_router(other_handlers.router)
