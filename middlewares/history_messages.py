@@ -60,9 +60,9 @@ class HistoryMessages(BaseMiddleware):
 
                     if not data.get('event_update').message.text.startswith("/history") and not data.get('event_update').message.text.startswith("/история"):
                         # Сразу добавим новое сообщение в историю
-                        new_message = "Пользователь: " + data.get('event_update').message.from_user.username + "\n" + "Сообщение: " + data.get('event_update').message.text
+                        new_message = "Пользователь: " + data.get('event_update').message.from_user.first_name + " [" + data.get('event_update').message.from_user.username + "]\n" + "Сообщение: " + data.get('event_update').message.text
                         history.append(new_message)
-
+                    print(history)
                     data["history"] = history
 
 
