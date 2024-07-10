@@ -23,7 +23,7 @@ def response_gpt4free_model_img(model, prompt: str, telegram_id: int) -> str:
     set_cookies(
         ".bing.com",
         {
-            "_U": "1eHf4dS3Jsz1V2EWax2hkfep6X7WPjHiCqwpF2tU9K5on3rLGBMZD3xZaKcZJZNsuDsGzkqLX7qrnDfoEPZb1HkD7-boZP3y33eTFHnaDNyVO0-Xk27z6hHxoXdDxDXKCuhXtXgYChiOi4HRTk8W_W6etpN9hU7-g2Z59haVD-6mrOoF6CAzqAiSnwWUb5jSXHMOsB0vSLMhqx3dG9FTG6EKA4CCA-iRAM2eMgiHv_9o"
+            "_U": "1LYJe3WJdjiWNpOAu2xeTi-th_yEMldwCyNHgIOvLQ0PkrzS6rGcGSx3eKT7Aci02tplL7s2Z-lDBMaKBDsKwr_b6f33uzyRrOybwLASvf8wJ5M1PSxAg2cFFVZ_WfcWLJBvCoGoPAbwm_ZZtXNOKT34gfNI5oSZAcz4tXFavIjIDalqce30xpRfwa1TgMrXPpL6ei4lR7CQa4GTAk_8Q3EquZMjs6Vmu7pRiMCrJ0uc"
         },
     )
 
