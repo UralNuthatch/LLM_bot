@@ -45,6 +45,7 @@ async def response_stability_img_model(text_request: str, telegram_id: int, db: 
         },
         files={"none": ''},
         data={
+            "model": "sd3-large",  # sd3-large-turbo - 4 credits, sd3-large - 6.5 credits
             "prompt": f"{text_request}",
             "output_format": "png",
         },

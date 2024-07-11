@@ -204,7 +204,7 @@ async def text_for_image(message: Message, bot: Bot, i18n: TranslatorRunner, db:
         if message.chat.type != "private":
             text = text.lstrip("/bot").lstrip("/бот")
         # Если выбрана текстовая модель, а пользователь начал свой запрос с "нарисуй"
-        if DrawWrongModelFilter()(message=message, llm=llm):
+        if await DrawWrongModelFilter()(message=message, llm=llm):
             # Выберем какую-то img-модель по-умолчанию
             model = "dall-e-3"
             llm_category, llm_model, llm_name, llm_img, llm_response = await db.get_data_from_model(model)

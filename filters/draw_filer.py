@@ -5,7 +5,7 @@ from aiogram.types import Message
 class DrawWrongModelFilter(Filter):
     async def __call__(self, message: Message, llm=None):
         text = message.text
-        if llm.get("response") != "img" and (text.startswith("нарисуй") or text.startswith("Нарисуй")
+        if llm.get("llm_response") != "img" and (text.startswith("нарисуй") or text.startswith("Нарисуй")
                                              or text.startswith("НАРИСУЙ") or text.startswith("draw")
                                              or text.startswith("Draw") or text.startswith("DRAW")
                                              or text.startswith("/бот нарисуй") or text.startswith("/бот Нарисуй")
