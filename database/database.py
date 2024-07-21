@@ -72,3 +72,23 @@ class DB:
     async def get_data_from_model(self, model: str):
         llm = await self.connection.fetchrow('SELECT id, name, model, category, img, response FROM llm WHERE model = $1', model)
         return (llm.get("category"), llm.get('model'), llm.get('name'), llm.get('img'), llm.get('response'))
+
+
+    async def get_luma_working_user(self, status: str):
+        return await self.connection.fetchval('SELECT login FROM luma_accounts WHERE working_now = $1', status)
+
+
+    async def get_active_accounts(self):
+        return await self.connection.fetchval("SELECT login FROM luma_accounts WHERE left_responses_all > 0")
+
+
+    async def get_free_accounts(self):
+        return await self.connection.fetch("SELECT login, password FROM luma_accounts WHERE working_now = '0' AND left_responses_all > 0")
+
+
+    async def change_luma_working_now(self, login: str, status: str):
+        await self.connection.execute('UPDATE luma_accounts SET working_now = $1 WHERE login = $2', status, login)
+
+
+    async def update_left_responses_all(self, login: str, left:int):
+        await self.connection.execute('UPDATE luma_accounts SET left_responses_all = $1 WHERE login = $2', left, login)

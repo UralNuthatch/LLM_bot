@@ -1,4 +1,6 @@
 import os
+import random
+import asyncio
 import logging
 import soundfile
 import speech_recognition as sr
@@ -22,6 +24,7 @@ from filters.type_response import TextResponse, ImgResponse
 from filters.chat_type import ChatTypeFilter
 from filters.draw_filer import DrawWrongModelFilter
 from services.models.stability import NoKeyError
+from services.models.luma import get_video_from_text
 
 
 # Создаем объект - роутер
@@ -49,6 +52,17 @@ async def process_start_command(message: Message):
         await message.answer("Hello, can I help you?")
 
 
+# Этот хэндлер срабатывает на команду help (пока только в приватных чатах)
+@router.message(Command(commands="help"), ChatTypeFilter("private"))
+async def process_start_command(message: Message):
+    try:
+        text_help = "Здесь будет текст ✏ \n*🦙 Или нет*"
+        await message.answer(text_help)
+    except:
+        # await message.answer(text_help)
+        pass
+
+
 # Этот хэндлер будет срабатывать на комнаду models
 @router.message(Command(commands="models"))
 async def process_help_command(message: Message, dialog_manager: DialogManager):
@@ -60,6 +74,41 @@ async def process_help_command(message: Message, dialog_manager: DialogManager):
 async def clear_last_messages(message: Message, i18n: TranslatorRunner, last_messages: list):
     last_messages.clear()
     await message.answer(i18n.cleared.cache())
+
+
+# Хэндлер на команду /luma для генерации видео из текста с помощью lumalabs.ai
+@router.message(Command(commands="luma"))
+async def luma_create_video(message: Message, command: CommandObject, bot: Bot, i18n: TranslatorRunner, db: DB, pool):
+    try:
+        if command.args is None:
+            await message.answer("Ошибка. Отправьте сообщение в виде: /luma текста запроса")
+            return
+        text_response = command.args
+        # Проверяем то что пользователь ничего не генерирует в данный момент
+        if await db.get_luma_working_user(f"{message.chat.id}_{message.from_user.id}"):
+            await message.answer("Дождитесь результата своего прошлого запроса генерации видео")
+            return
+        # Проверка есть ли аккаунты, на которых еще есть попытки
+        if await db.get_active_accounts() is None:
+            await message.answer("К сожалению на сегодня закончились попытки генерации видео. Попробуйте завтра.")
+            return
+        # запрос в БД для получения свободных на данный момент аккаунтов из базы данных
+        accounts = await db.get_free_accounts()
+        if len(accounts) == 0:
+            await message.answer("Генерация видео временно недоступна. Попробуйте позднее.")
+            return
+        # берем рандомный аккаунт
+        account = random.choice(accounts)
+        login = account.get("login")
+        password = account.get("password")
+        # изменяем статус аккаунта, меняем working_now с '0' на chat_id_user_id
+        await db.change_luma_working_now(login, f"{message.chat.id}_{message.from_user.id}")
+        await message.answer("Началась генерация видео. Этот процесс может занять некоторое время(до 10 минут)")
+        # выполняем генерацию
+        asyncio.create_task(get_video_from_text(login, password, text_response, message, pool))
+    except Exception as ex:
+        logging.error(ex)
+        await message.answer("Что-то пошло не так")
 
 
 # Этот хэндлер срабатывает когда приходит звуковое сообщение, а в ответ будет текст (только в приватных чатах)

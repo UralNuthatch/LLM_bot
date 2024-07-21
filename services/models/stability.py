@@ -281,7 +281,7 @@ async def response_image_to_video_result(callback: CallbackQuery, manager: BaseD
                 #logging.info("Generation complete!")
                 await manager.update({"progress": 100})
                 # У бота появляется статус - отправляет видео
-                callback.message.bot.send_chat_action(callback.message.chat.id, action="upload_video")
+                await callback.message.bot.send_chat_action(callback.message.chat.id, action="upload_video")
                 with open(f"{telegram_id}.mp4", 'wb') as file:
                     file.write(response.content)
                     video = FSInputFile(f"{telegram_id}.mp4")
@@ -291,7 +291,7 @@ async def response_image_to_video_result(callback: CallbackQuery, manager: BaseD
             else:
                 logging.error(str(response.json()))
         else:
-            callback.message.answer(i18n.error())
+            await callback.message.answer(i18n.error())
     except Exception as ex:
         logging.error(ex)
     finally:
