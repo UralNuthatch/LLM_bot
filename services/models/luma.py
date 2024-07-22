@@ -31,10 +31,9 @@ def get_options():
 
 async def get_video_from_text(login, password, text_response, message: Message, pool):
     try:
-        print("enter generate")
         options = get_options()
         driver = webdriver.Chrome(options=options)
-        print("create driver")
+
         driver.get("https://lumalabs.ai/dream-machine/creations")
 
         wait = WebDriverWait(driver, 10, 1)
@@ -56,10 +55,10 @@ async def get_video_from_text(login, password, text_response, message: Message, 
         if not driver.current_url.startswith("https://luma"):
             BTN_NEXT_SIGN = ("xpath", '//button[./span[text()="Продолжить"]]')
             wait.until(EC.element_to_be_clickable(BTN_NEXT_SIGN)).click()
-        print("enter luma")
+
         GENERATIONS_LEFT = ("xpath", '//strong[@class="font-medium"]')
         gen_left = wait.until(EC.visibility_of_element_located(GENERATIONS_LEFT)).text
-        
+
         # Получение соединения из пула
         async with pool.acquire() as connection:
             # Открытие транзакции
@@ -70,38 +69,43 @@ async def get_video_from_text(login, password, text_response, message: Message, 
 
         if gen_left == "0":
             raise Exception(f"Account {login} have 0 generations left")
-        print("left responses")
+
         # Вводим запрос и нажимаем кнопку генерации видео
         response = ("xpath", '//textarea[contains(@class, "placeholder")]')
         wait.until(EC.visibility_of_element_located(response)).send_keys(text_response)
         btn_response = ("xpath", '//button[contains(@class, "relative size")]')
         wait.until(EC.element_to_be_clickable(btn_response)).click()
-        print("start generate video from response")
-        await asyncio.sleep(15)
 
         BTN_DOWNLOAD = ("xpath", "(//div[@class='flex flex-col gap-2'])[1]//button[@title='Download']")
         for _ in range(120):
             try:
                 await asyncio.sleep(30)
-                print("in cycle")
-                driver.find_element(*BTN_DOWNLOAD)
-                driver.refresh()
-                driver.find_element(*BTN_DOWNLOAD).click()
-                print("download video")
-                asyncio.sleep(15)
+                # Проверяем готово ли, появилась ли кнопка download
+                button_download = driver.find_element(*BTN_DOWNLOAD)
+                # Получаем список всех файлов, которые уже были в директории
+                files_before = os.listdir("downloads_luma")
+                # Скачивание файла
+                button_download.click()
+                await asyncio.sleep(5)
+                # Список всех файлов включая новый
+                files_after = os.listdir("downloads_luma")
+                await asyncio.sleep(10)
                 break
             except:
                 pass
         else:
-            logging.error("10 min not enough to generate this video")
+            logging.error("60 min not enough to generate this video")
             return
-        print("try send video")
-        for file in os.listdir("downloads_luma"):
-            if text_response[:5] in file:
+
+        # Получаем имя файла и отправляем в чат
+        for file in files_after:
+            if not file in files_before:
                 await message.bot.send_chat_action(message.chat.id, action="upload_video")
                 video = FSInputFile(f"downloads_luma/{file}")
                 await message.answer_video(video)
                 os.remove(f"downloads_luma/{file}")
+                break
+
         print("finish")
 
     except Exception as ex:

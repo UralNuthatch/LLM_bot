@@ -103,7 +103,7 @@ async def luma_create_video(message: Message, command: CommandObject, bot: Bot, 
         password = account.get("password")
         # изменяем статус аккаунта, меняем working_now с '0' на chat_id_user_id
         await db.change_luma_working_now(login, f"{message.chat.id}_{message.from_user.id}")
-        await message.answer("Началась генерация видео. Этот процесс может занять некоторое время(до 10 минут)")
+        await message.answer("Процесс генерации видео может занять некоторое время(в зависимости от нагруженности сервиса luma)")
         # выполняем генерацию
         asyncio.create_task(get_video_from_text(login, password, text_response, message, pool))
     except Exception as ex:
