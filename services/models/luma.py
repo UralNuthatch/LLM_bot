@@ -31,12 +31,11 @@ def get_options():
 
 async def get_video_from_text(login, password, text_response, message: Message, pool):
     try:
-        print("enter func")
         options = get_options()
         driver = webdriver.Chrome(options=options)
 
         driver.get("https://lumalabs.ai/dream-machine/creations")
-        print("open luma site")
+
         wait = WebDriverWait(driver, 10, 1)
         # Логин в аккаунт google
         BTN_SIGN_UP_WITH_GOOGLE = ("xpath", '//a[contains(@class, "w-max")]')
@@ -56,7 +55,7 @@ async def get_video_from_text(login, password, text_response, message: Message, 
         if not driver.current_url.startswith("https://luma"):
             BTN_NEXT_SIGN = ("xpath", '//button[./span[text()="Продолжить"]]')
             wait.until(EC.element_to_be_clickable(BTN_NEXT_SIGN)).click()
-        print("enter google")
+
         GENERATIONS_LEFT = ("xpath", '//strong[@class="font-medium"]')
         gen_left = wait.until(EC.visibility_of_element_located(GENERATIONS_LEFT)).text
 
@@ -76,9 +75,9 @@ async def get_video_from_text(login, password, text_response, message: Message, 
         wait.until(EC.visibility_of_element_located(response)).send_keys(text_response)
         btn_response = ("xpath", '//button[contains(@class, "relative size")]')
         wait.until(EC.element_to_be_clickable(btn_response)).click()
-        print("start generate")
+
         BTN_DOWNLOAD = ("xpath", "(//div[@class='flex flex-col gap-2'])[1]//button[@title='Download']")
-        for _ in range(120):
+        for _ in range(360):
             try:
                 await asyncio.sleep(30)
                 # Проверяем готово ли, появилась ли кнопка download
@@ -95,9 +94,9 @@ async def get_video_from_text(login, password, text_response, message: Message, 
             except:
                 pass
         else:
-            logging.error("60 min not enough to generate this video")
+            logging.error("180 min not enough to generate this video")
             return
-        print("try send")
+
         # Получаем имя файла и отправляем в чат
         for file in files_after:
             if not file in files_before:
@@ -106,8 +105,6 @@ async def get_video_from_text(login, password, text_response, message: Message, 
                 await message.answer_video(video)
                 os.remove(f"downloads_luma/{file}")
                 break
-
-        print("finish")
 
     except Exception as ex:
         logging.error(ex)
