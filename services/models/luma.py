@@ -96,7 +96,7 @@ async def get_video_from_text(login, password, text_response, message: Message, 
         else:
             logging.error("180 min not enough to generate this video")
             return
-
+# test
         # Получаем имя файла и отправляем в чат
         for file in files_after:
             if not file in files_before:
