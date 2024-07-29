@@ -23,7 +23,7 @@ def get_options():
     options.add_experimental_option("useAutomationExtension", False)
     # Указываем директорию для скачивания файлов
     preferences = {
-        "download.default_directory": os.path.join(os.getcwd(), "downloads_luma")
+        "download.default_directory": os.path.join(os.getcwd(), "downloads/luma")
     }
     options.add_experimental_option("prefs", preferences)
     return options
@@ -83,12 +83,12 @@ async def get_video_from_text(login, password, text_response, message: Message, 
                 # Проверяем готово ли, появилась ли кнопка download
                 button_download = driver.find_element(*BTN_DOWNLOAD)
                 # Получаем список всех файлов, которые уже были в директории
-                files_before = os.listdir("downloads_luma")
+                files_before = os.listdir("downloads/luma")
                 # Скачивание файла
                 button_download.click()
                 await asyncio.sleep(5)
                 # Список всех файлов включая новый
-                files_after = os.listdir("downloads_luma")
+                files_after = os.listdir("downloads/luma")
                 await asyncio.sleep(10)
                 break
             except:
@@ -101,9 +101,9 @@ async def get_video_from_text(login, password, text_response, message: Message, 
         for file in files_after:
             if not file in files_before:
                 await message.bot.send_chat_action(message.chat.id, action="upload_video")
-                video = FSInputFile(f"downloads_luma/{file}")
+                video = FSInputFile(f"downloads/luma/{file}")
                 await message.answer_video(video)
-                os.remove(f"downloads_luma/{file}")
+                os.remove(f"downloads/luma/{file}")
                 break
 
     except Exception as ex:
