@@ -19,7 +19,7 @@ async def select_model_category(llm_category: int, llm_model, text_request: str,
         case 4:
             return await response_stability_img_model(text_request, telegram_id, db)
         case 5:
-            return response_gpt4free_model_img(llm_model, text_request, telegram_id)
+            return await response_gpt4free_model_img(llm_model, text_request, telegram_id, db)
         case 6:
             return response_fireworks(llm_model, messages)
         case 7:

@@ -92,3 +92,7 @@ class DB:
 
     async def update_left_responses_all(self, login: str, left:int):
         await self.connection.execute('UPDATE luma_accounts SET left_responses_all = $1 WHERE login = $2', left, login)
+
+
+    async def get_cookies_create_images(self):
+        return await self.connection.fetch("SELECT name, value, domain FROM cookies_create_img")
