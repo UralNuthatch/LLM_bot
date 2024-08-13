@@ -5,6 +5,7 @@ from services.models.idb_openai import response_idb_openai_model
 from services.models.stability import response_stability_img_model
 from services.models.fireworks import response_fireworks
 from services.models.openai import response_openai
+from services.models.falai import response_falai_model_img
 from database.database import DB
 
 
@@ -24,3 +25,5 @@ async def select_model_category(llm_category: int, llm_model, text_request: str,
             return response_fireworks(llm_model, messages)
         case 7:
             return response_openai(llm_model, messages)
+        case 8:
+            return await response_falai_model_img(llm_model, text_request, telegram_id)
