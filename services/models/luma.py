@@ -56,19 +56,19 @@ async def get_video_from_text(login, password, text_response, message: Message, 
             BTN_NEXT_SIGN = ("xpath", '//button[./span[text()="Продолжить"]]')
             wait.until(EC.element_to_be_clickable(BTN_NEXT_SIGN)).click()
 
-        GENERATIONS_LEFT = ("xpath", '//strong[@class="font-medium"]')
-        gen_left = wait.until(EC.visibility_of_element_located(GENERATIONS_LEFT)).text
+        # GENERATIONS_LEFT = ("xpath", '//strong[@class="font-medium"]')
+        # gen_left = wait.until(EC.visibility_of_element_located(GENERATIONS_LEFT), message="didnt find gen left").text
 
-        # Получение соединения из пула
-        async with pool.acquire() as connection:
-            # Открытие транзакции
-            async with connection.transaction():
-                db = DB(connection=connection)
-                # Обновляем кол-во оставшихся попыток
-                await db.update_left_responses_all(login, max(0, int(gen_left) - 1))
+        # # Получение соединения из пула
+        # async with pool.acquire() as connection:
+        #     # Открытие транзакции
+        #     async with connection.transaction():
+        #         db = DB(connection=connection)
+        #         # Обновляем кол-во оставшихся попыток
+        #         await db.update_left_responses_all(login, max(0, int(gen_left) - 1))
 
-        if gen_left == "0":
-            raise Exception(f"Account {login} have 0 generations left")
+        # if gen_left == "0":
+        #     raise Exception(f"Account {login} have 0 generations left")
 
         # Вводим запрос и нажимаем кнопку генерации видео
         response = ("xpath", '//textarea[contains(@class, "placeholder")]')
@@ -76,7 +76,10 @@ async def get_video_from_text(login, password, text_response, message: Message, 
         btn_response = ("xpath", '//button[contains(@class, "relative size")]')
         wait.until(EC.element_to_be_clickable(btn_response)).click()
 
-        BTN_DOWNLOAD = ("xpath", "(//div[@class='flex flex-col gap-2'])[1]//button[@title='Download']")
+        BTN_DOWNLOAD = (
+            "xpath",
+            "(//div[@class='flex flex-col gap-2'])[1]//button[@title='Download']",
+        )
         for _ in range(360):
             try:
                 await asyncio.sleep(30)
@@ -96,11 +99,13 @@ async def get_video_from_text(login, password, text_response, message: Message, 
         else:
             logging.error("180 min not enough to generate this video")
             return
-# test
+        # test
         # Получаем имя файла и отправляем в чат
         for file in files_after:
             if not file in files_before:
-                await message.bot.send_chat_action(message.chat.id, action="upload_video")
+                await message.bot.send_chat_action(
+                    message.chat.id, action="upload_video"
+                )
                 video = FSInputFile(f"downloads/luma/{file}")
                 await message.answer_video(video)
                 os.remove(f"downloads/luma/{file}")
@@ -108,7 +113,9 @@ async def get_video_from_text(login, password, text_response, message: Message, 
 
     except Exception as ex:
         logging.error(ex)
-        await message.answer(f"Произошла ошибка во время генерации видео по запросу: {text_response}")
+        await message.answer(
+            f"Произошла ошибка во время генерации видео по запросу: {text_response}"
+        )
     finally:
         # Получение соединения из пула
         async with pool.acquire() as connection:
