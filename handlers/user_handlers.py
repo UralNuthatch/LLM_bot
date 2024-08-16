@@ -318,11 +318,20 @@ async def text_for_text(message: Message, i18n: TranslatorRunner, db: DB, llm: d
         last_messages.append({"role": "assistant", "content": response})
     # Если parse_mode=Markdown поломан - TelegramBadRequest - can't parse entities...
     except TelegramBadRequest:
-        await message.answer(f'{llm["llm_img"]} {llm["llm_name"]}:\n{response[:4050]}', parse_mode='HTML')
-        if response[4050:]:
-            await message.answer(f'{response[4050:]}', parse_mode='HTML')
-        # Добавляем ответ в последние сообщения
-        last_messages.append({"role": "assistant", "content": response})
+        try:
+            # Удаление звездочек которые ломают parse_mode=Markdown
+            response_no_stars = response.replace("* ", "")
+            await message.answer(f'{llm["llm_img"]} {llm["llm_name"]}:\n{response_no_stars[:4050]}')
+            if response_no_stars[4050:]:
+                await message.answer(f'{response_no_stars[4050:]}')
+            last_messages.append({"role": "assistant", "content": response_no_stars})
+        except:
+            # Если ошибка то отправить без parse_mode совсем засчет disable_web_page_preview=True
+            await message.answer(f'{llm["llm_img"]} {llm["llm_name"]}:\n{response[:4050]}', parse_mode='HTML', disable_web_page_preview=True)
+            if response[4050:]:
+                await message.answer(f'{response[4050:]}', parse_mode='HTML', disable_web_page_preview=True)
+            # Добавляем ответ в последние сообщения
+            last_messages.append({"role": "assistant", "content": response})
     except Exception as ex:
         # Удаляем последний запрос из последних сообщений, т.к. не получили ответа
         last_messages.pop()
